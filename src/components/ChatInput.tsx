@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowUp, Image as ImageIcon, Mic, Globe, LightBulb } from "lucide-react";
+import { ArrowUp, Image as ImageIcon, Mic, Globe, Lightbulb } from "lucide-react";
 import { useRef, useState, KeyboardEvent, ChangeEvent } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
