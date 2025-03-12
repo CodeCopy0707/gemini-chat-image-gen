@@ -23,14 +23,15 @@ const MessageList = ({ messages }: MessageListProps) => {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [imagesLoaded, setImagesLoaded] = useState<Record<string, boolean>>({});
 
-  // Auto-scroll to bottom whenever messages change or images load
+  // Enhanced auto-scroll with smooth behavior
   useEffect(() => {
     if (scrollAreaRef.current) {
       const scrollableDiv = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
       if (scrollableDiv) {
-        setTimeout(() => {
-          scrollableDiv.scrollTop = scrollableDiv.scrollHeight;
-        }, 100);
+        scrollableDiv.scrollTo({
+          top: scrollableDiv.scrollHeight,
+          behavior: 'smooth'
+        });
       }
     }
   }, [messages, imagesLoaded]);
@@ -43,7 +44,7 @@ const MessageList = ({ messages }: MessageListProps) => {
     return (
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="text-center space-y-4 max-w-md mx-auto">
-          <h3 className="text-3xl font-semibold">What can I help with?</h3>
+          <h3 className="text-4xl font-semibold">What can I help with?</h3>
         </div>
       </div>
     );
@@ -57,13 +58,13 @@ const MessageList = ({ messages }: MessageListProps) => {
             <div
               key={message.id}
               className={cn(
-                "py-6 px-4 md:px-8",
+                "py-8 px-4 md:px-8",
                 message.role === "assistant" ? "bg-gray-50" : "bg-white"
               )}
             >
               <div className="max-w-3xl mx-auto flex items-start gap-4">
                 <div className={cn(
-                  "flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center mt-1",
+                  "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mt-1",
                   message.role === "user" ? "bg-gray-300" : "bg-emerald-500"
                 )}>
                   {message.role === "user" ? (
@@ -75,18 +76,18 @@ const MessageList = ({ messages }: MessageListProps) => {
                 
                 <div className="flex-1 overflow-hidden">
                   {message.images && message.images.length > 0 && (
-                    <div className="mb-3 space-y-2">
+                    <div className="mb-4 space-y-3">
                       {message.images.map((img, index) => (
                         <div key={index} className="relative">
                           {!imagesLoaded[img] && (
                             <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-md">
-                              <ImageIcon className="h-8 w-8 text-gray-400 animate-pulse" />
+                              <ImageIcon className="h-10 w-10 text-gray-400 animate-pulse" />
                             </div>
                           )}
                           <img
                             src={img}
                             alt={`Uploaded image ${index + 1}`}
-                            className="rounded-md max-h-72 w-auto object-contain"
+                            className="rounded-md max-h-96 w-auto object-contain"
                             onLoad={() => handleImageLoad(img)}
                             style={{ display: imagesLoaded[img] ? "block" : "none" }}
                           />
@@ -96,20 +97,20 @@ const MessageList = ({ messages }: MessageListProps) => {
                   )}
 
                   {message.isLoading ? (
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-[250px]" />
-                      <Skeleton className="h-4 w-[200px]" />
-                      <Skeleton className="h-4 w-[150px]" />
+                    <div className="space-y-3">
+                      <Skeleton className="h-5 w-[300px]" />
+                      <Skeleton className="h-5 w-[250px]" />
+                      <Skeleton className="h-5 w-[200px]" />
                     </div>
                   ) : (
                     <div className={cn(
-                      "prose prose-sm max-w-none",
+                      "prose prose-lg max-w-none leading-relaxed",
                       message.role === "assistant" ? "prose-neutral" : ""
                     )}>
                       {message.role === "assistant" ? (
                         <ReactMarkdown>{message.content}</ReactMarkdown>
                       ) : (
-                        <p>{message.content}</p>
+                        <p className="text-lg">{message.content}</p>
                       )}
                     </div>
                   )}
@@ -118,7 +119,7 @@ const MessageList = ({ messages }: MessageListProps) => {
             </div>
           ))}
         </div>
-        <div className="h-32" /> {/* Extra space at the bottom for better UX */}
+        <div className="h-32" />
       </ScrollArea>
     </div>
   );
