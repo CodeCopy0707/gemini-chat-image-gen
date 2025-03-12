@@ -93,7 +93,7 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t py-4">
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t py-4 shadow-md z-10">
       <div className="max-w-3xl mx-auto px-4">
         {images.length > 0 && (
           <div className="mb-2 flex items-center gap-2 overflow-x-auto thin-scrollbar py-2">
@@ -110,7 +110,7 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
                   className="absolute -top-2 -right-2 h-5 w-5 rounded-full"
                   onClick={() => removeImage(index)}
                 >
-                  <ArrowUp className="h-3 w-3" />
+                  <ArrowUp className="h-3 w-3 rotate-45" />
                 </Button>
               </div>
             ))}
@@ -118,13 +118,13 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
         )}
         
         <div className="relative">
-          <div className="rounded-xl border shadow-sm focus-within:ring-1 focus-within:ring-gray-300">
+          <div className="rounded-xl border border-gray-300 shadow-sm focus-within:ring-1 focus-within:ring-gray-300 bg-white">
             <Textarea
               ref={textareaRef}
               value={message}
               onChange={handleTextareaChange}
               onKeyDown={handleKeyDown}
-              placeholder="Ask anything..."
+              placeholder="Message Gemini..."
               className="min-h-[24px] max-h-[200px] resize-none py-3 px-4 border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-xl shadow-none"
               disabled={disabled}
             />
@@ -140,11 +140,11 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
                 disabled={disabled || isUploading}
               />
               
-              <div className="flex border rounded-lg overflow-hidden p-1">
+              <div className="flex border rounded-lg overflow-hidden">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 rounded-lg"
+                  className="h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700"
                   onClick={() => imageInputRef.current?.click()}
                   disabled={disabled || isUploading || images.length >= 5}
                 >
@@ -154,16 +154,25 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 rounded-lg"
+                  className="h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700"
                   disabled={true}
                 >
                   <Mic className="h-4 w-4" />
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700"
+                  disabled={true}
+                >
+                  <Lightbulb className="h-4 w-4" />
                 </Button>
               </div>
               
               <Button
                 className={cn(
-                  "h-8 w-8 rounded-lg bg-black text-white hover:bg-gray-800",
+                  "h-8 w-8 rounded-lg bg-black text-white hover:bg-gray-800 ml-1",
                   (!message.trim() && images.length === 0) && "opacity-50 cursor-not-allowed"
                 )}
                 onClick={handleSendMessage}
@@ -175,7 +184,7 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
           </div>
           
           <div className="mt-2 text-center text-xs text-gray-500">
-            <p>ChatGPT can make mistakes. Check important info.</p>
+            <p>Gemini may display inaccurate info, including about people, so double-check its responses.</p>
           </div>
         </div>
       </div>

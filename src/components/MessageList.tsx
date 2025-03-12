@@ -20,12 +20,18 @@ interface MessageListProps {
 }
 
 const MessageList = ({ messages }: MessageListProps) => {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [imagesLoaded, setImagesLoaded] = useState<Record<string, boolean>>({});
 
+  // Auto-scroll to bottom whenever messages change or images load
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (scrollAreaRef.current) {
+      const scrollableDiv = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollableDiv) {
+        setTimeout(() => {
+          scrollableDiv.scrollTop = scrollableDiv.scrollHeight;
+        }, 100);
+      }
     }
   }, [messages, imagesLoaded]);
 
@@ -44,78 +50,77 @@ const MessageList = ({ messages }: MessageListProps) => {
   }
 
   return (
-    <ScrollArea
-      ref={scrollRef}
-      className="flex-1 overflow-y-auto thin-scrollbar"
-    >
-      <div className="w-full max-w-4xl mx-auto">
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={cn(
-              "py-6 px-4 md:px-8",
-              message.role === "assistant" ? "bg-gray-50" : "bg-white"
-            )}
-          >
-            <div className="max-w-3xl mx-auto flex items-start gap-4">
-              <div className={cn(
-                "flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center mt-1",
-                message.role === "user" ? "bg-gray-300" : "bg-emerald-500"
-              )}>
-                {message.role === "user" ? (
-                  <UserIcon />
-                ) : (
-                  <BotIcon />
-                )}
-              </div>
-              
-              <div className="flex-1 overflow-hidden">
-                {message.images && message.images.length > 0 && (
-                  <div className="mb-3 space-y-2">
-                    {message.images.map((img, index) => (
-                      <div key={index} className="relative">
-                        {!imagesLoaded[img] && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-md">
-                            <ImageIcon className="h-8 w-8 text-gray-400 animate-pulse" />
-                          </div>
-                        )}
-                        <img
-                          src={img}
-                          alt={`Uploaded image ${index + 1}`}
-                          className="rounded-md max-h-72 w-auto object-contain"
-                          onLoad={() => handleImageLoad(img)}
-                          style={{ display: imagesLoaded[img] ? "block" : "none" }}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
+    <div className="flex-1 relative overflow-hidden" ref={scrollAreaRef}>
+      <ScrollArea className="h-full pb-32">
+        <div className="w-full mx-auto">
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={cn(
+                "py-6 px-4 md:px-8",
+                message.role === "assistant" ? "bg-gray-50" : "bg-white"
+              )}
+            >
+              <div className="max-w-3xl mx-auto flex items-start gap-4">
+                <div className={cn(
+                  "flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center mt-1",
+                  message.role === "user" ? "bg-gray-300" : "bg-emerald-500"
+                )}>
+                  {message.role === "user" ? (
+                    <UserIcon />
+                  ) : (
+                    <BotIcon />
+                  )}
+                </div>
+                
+                <div className="flex-1 overflow-hidden">
+                  {message.images && message.images.length > 0 && (
+                    <div className="mb-3 space-y-2">
+                      {message.images.map((img, index) => (
+                        <div key={index} className="relative">
+                          {!imagesLoaded[img] && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-md">
+                              <ImageIcon className="h-8 w-8 text-gray-400 animate-pulse" />
+                            </div>
+                          )}
+                          <img
+                            src={img}
+                            alt={`Uploaded image ${index + 1}`}
+                            className="rounded-md max-h-72 w-auto object-contain"
+                            onLoad={() => handleImageLoad(img)}
+                            style={{ display: imagesLoaded[img] ? "block" : "none" }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
-                {message.isLoading ? (
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-[250px]" />
-                    <Skeleton className="h-4 w-[200px]" />
-                    <Skeleton className="h-4 w-[150px]" />
-                  </div>
-                ) : (
-                  <div className={cn(
-                    "prose prose-sm max-w-none",
-                    message.role === "assistant" ? "prose-neutral" : ""
-                  )}>
-                    {message.role === "assistant" ? (
-                      <ReactMarkdown>{message.content}</ReactMarkdown>
-                    ) : (
-                      <p>{message.content}</p>
-                    )}
-                  </div>
-                )}
+                  {message.isLoading ? (
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-[250px]" />
+                      <Skeleton className="h-4 w-[200px]" />
+                      <Skeleton className="h-4 w-[150px]" />
+                    </div>
+                  ) : (
+                    <div className={cn(
+                      "prose prose-sm max-w-none",
+                      message.role === "assistant" ? "prose-neutral" : ""
+                    )}>
+                      {message.role === "assistant" ? (
+                        <ReactMarkdown>{message.content}</ReactMarkdown>
+                      ) : (
+                        <p>{message.content}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
-      <div className="h-32" /> {/* Extra space at the bottom for better UX */}
-    </ScrollArea>
+          ))}
+        </div>
+        <div className="h-32" /> {/* Extra space at the bottom for better UX */}
+      </ScrollArea>
+    </div>
   );
 };
 
