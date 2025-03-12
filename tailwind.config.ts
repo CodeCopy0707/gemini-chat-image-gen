@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,14 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				gemini: {
+					blue: '#8ab4f8',
+					purple: '#c58af9',
+					green: '#81c995',
+					red: '#f28b82',
+					yellow: '#fdd663',
+					teal: '#78d9ec',
 				}
 			},
 			borderRadius: {
@@ -84,12 +93,57 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'pulse-slow': {
+					'0%, 100%': { opacity: '1' },
+					'50%': { opacity: '0.5' }
+				},
+				'fade-in': {
+					'0%': { opacity: '0', transform: 'translateY(10px)' },
+					'100%': { opacity: '1', transform: 'translateY(0)' }
+				},
+				'fade-out': {
+					'0%': { opacity: '1', transform: 'translateY(0)' },
+					'100%': { opacity: '0', transform: 'translateY(10px)' }
+				},
+				'slide-in': {
+					'0%': { transform: 'translateX(100%)' },
+					'100%': { transform: 'translateX(0)' }
+				},
+				'slide-out': {
+					'0%': { transform: 'translateX(0)' },
+					'100%': { transform: 'translateX(100%)' }
+				},
+				'typing': {
+					'0%': { width: '0%' },
+					'100%': { width: '100%' }
+				},
+				'bounce-light': {
+					'0%, 100%': { transform: 'translateY(0)' },
+					'50%': { transform: 'translateY(-2px)' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
-			}
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'pulse-slow': 'pulse-slow 2s ease-in-out infinite',
+				'fade-in': 'fade-in 0.3s ease-out forwards',
+				'fade-out': 'fade-out 0.3s ease-in forwards',
+				'slide-in': 'slide-in 0.3s ease-out forwards',
+				'slide-out': 'slide-out 0.3s ease-in forwards',
+				'typing': 'typing 1.5s steps(30, end) infinite',
+				'bounce-light': 'bounce-light 1.5s ease-in-out infinite'
+			},
+			backdropFilter: {
+				'none': 'none',
+				'blur': 'blur(8px)',
+			},
+			boxShadow: {
+				'glass': '0 4px 30px rgba(0, 0, 0, 0.1)',
+				'glass-lg': '0 8px 32px rgba(0, 0, 0, 0.1)',
+				'subtle': '0 2px 10px rgba(0, 0, 0, 0.05)',
+				'elevate': '0 10px 30px -5px rgba(0, 0, 0, 0.1)',
+			},
 		}
 	},
 	plugins: [require("tailwindcss-animate")],
