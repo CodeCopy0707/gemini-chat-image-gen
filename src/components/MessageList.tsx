@@ -23,15 +23,17 @@ const MessageList = ({ messages }: MessageListProps) => {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [imagesLoaded, setImagesLoaded] = useState<Record<string, boolean>>({});
 
-  // Enhanced auto-scroll with smooth behavior
+  // Enhanced auto-scroll with smooth behavior and increased delay
   useEffect(() => {
     if (scrollAreaRef.current) {
       const scrollableDiv = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
       if (scrollableDiv) {
-        scrollableDiv.scrollTo({
-          top: scrollableDiv.scrollHeight,
-          behavior: 'smooth'
-        });
+        setTimeout(() => {
+          scrollableDiv.scrollTo({
+            top: scrollableDiv.scrollHeight,
+            behavior: 'smooth'
+          });
+        }, 100);
       }
     }
   }, [messages, imagesLoaded]);
@@ -51,7 +53,7 @@ const MessageList = ({ messages }: MessageListProps) => {
   }
 
   return (
-    <div className="flex-1 relative overflow-hidden" ref={scrollAreaRef}>
+    <div className="flex-1 relative h-[calc(100vh-180px)] overflow-hidden" ref={scrollAreaRef}>
       <ScrollArea className="h-full pb-32">
         <div className="w-full mx-auto">
           {messages.map((message) => (
