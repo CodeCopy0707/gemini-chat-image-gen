@@ -11,31 +11,36 @@ const ChatHeader = ({ toggleSidebar }: ChatHeaderProps) => {
   const [showSettings, setShowSettings] = useState(false);
 
   return (
-    <header className="w-full h-16 border-b flex items-center justify-between px-4 glassmorphism sticky top-0 z-10">
+    <header className="w-full h-14 flex items-center justify-between px-4 sticky top-0 z-10 bg-white border-b">
       <div className="flex items-center gap-2">
         <Button 
           variant="ghost" 
           size="icon" 
           onClick={toggleSidebar} 
-          className="md:hidden"
+          className="hover:bg-gray-100"
         >
           <Menu className="h-5 w-5" />
         </Button>
         <div className="flex items-center gap-1.5">
-          <div className="h-6 w-6 rounded-full bg-gradient-to-br from-gemini-blue via-gemini-purple to-gemini-green"></div>
-          <h1 className="text-lg font-semibold">Gemini</h1>
+          <h1 className="text-lg font-semibold">ChatGPT</h1>
         </div>
       </div>
       <div className="flex items-center gap-2">
+        <Button variant="ghost" size="sm" className="text-xs text-gray-500">
+          Memory Full
+        </Button>
         <Button 
           variant="ghost" 
-          size="icon" 
-          onClick={() => setShowSettings(!showSettings)}
-          className="transition-all hover:rotate-45"
+          size="icon"
+          className="hover:bg-gray-100 rounded-full"
         >
           <Settings className="h-5 w-5" />
         </Button>
-        <Button variant="ghost" size="icon">
+        <Button 
+          variant="ghost" 
+          size="icon"
+          className="hover:bg-gray-100 rounded-full"
+        >
           <UserCircle className="h-6 w-6" />
         </Button>
       </div>

@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowUp, Image as ImageIcon, Mic, X } from "lucide-react";
+import { ArrowUp, Image as ImageIcon, Mic, Globe, LightBulb } from "lucide-react";
 import { useRef, useState, KeyboardEvent, ChangeEvent } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -25,7 +25,7 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
       setImages([]);
       
       if (textareaRef.current) {
-        textareaRef.current.style.height = "56px";
+        textareaRef.current.style.height = "24px";
       }
     }
   };
@@ -84,7 +84,7 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
     
     // Auto-resize textarea
     if (textareaRef.current) {
-      textareaRef.current.style.height = "56px";
+      textareaRef.current.style.height = "24px";
       textareaRef.current.style.height = `${Math.min(
         textareaRef.current.scrollHeight,
         200
@@ -93,80 +93,91 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
   };
 
   return (
-    <div className="p-4 border-t glassmorphism sticky bottom-0 z-10">
-      {images.length > 0 && (
-        <div className="mb-2 flex items-center gap-2 overflow-x-auto thin-scrollbar py-2">
-          {images.map((img, index) => (
-            <div key={index} className="relative flex-shrink-0">
-              <img
-                src={img}
-                alt={`Upload ${index + 1}`}
-                className="h-16 w-16 object-cover rounded-md border"
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t py-4">
+      <div className="max-w-3xl mx-auto px-4">
+        {images.length > 0 && (
+          <div className="mb-2 flex items-center gap-2 overflow-x-auto thin-scrollbar py-2">
+            {images.map((img, index) => (
+              <div key={index} className="relative flex-shrink-0">
+                <img
+                  src={img}
+                  alt={`Upload ${index + 1}`}
+                  className="h-16 w-16 object-cover rounded-md border"
+                />
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="absolute -top-2 -right-2 h-5 w-5 rounded-full"
+                  onClick={() => removeImage(index)}
+                >
+                  <ArrowUp className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+        
+        <div className="relative">
+          <div className="rounded-xl border shadow-sm focus-within:ring-1 focus-within:ring-gray-300">
+            <Textarea
+              ref={textareaRef}
+              value={message}
+              onChange={handleTextareaChange}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask anything..."
+              className="min-h-[24px] max-h-[200px] resize-none py-3 px-4 border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-xl shadow-none"
+              disabled={disabled}
+            />
+            
+            <div className="absolute right-2 bottom-2 flex items-center gap-1">
+              <input
+                type="file"
+                ref={imageInputRef}
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handleImageUpload}
+                disabled={disabled || isUploading}
               />
+              
+              <div className="flex border rounded-lg overflow-hidden p-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-lg"
+                  onClick={() => imageInputRef.current?.click()}
+                  disabled={disabled || isUploading || images.length >= 5}
+                >
+                  <ImageIcon className="h-4 w-4" />
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-lg"
+                  disabled={true}
+                >
+                  <Mic className="h-4 w-4" />
+                </Button>
+              </div>
+              
               <Button
-                variant="secondary"
-                size="icon"
-                className="absolute -top-2 -right-2 h-5 w-5 rounded-full"
-                onClick={() => removeImage(index)}
+                className={cn(
+                  "h-8 w-8 rounded-lg bg-black text-white hover:bg-gray-800",
+                  (!message.trim() && images.length === 0) && "opacity-50 cursor-not-allowed"
+                )}
+                onClick={handleSendMessage}
+                disabled={disabled || (!message.trim() && images.length === 0)}
               >
-                <X className="h-3 w-3" />
+                <ArrowUp className="h-4 w-4" />
               </Button>
             </div>
-          ))}
-        </div>
-      )}
-      
-      <div className="flex items-end gap-2">
-        <div className="relative flex-1">
-          <Textarea
-            ref={textareaRef}
-            value={message}
-            onChange={handleTextareaChange}
-            onKeyDown={handleKeyDown}
-            placeholder="Message Gemini..."
-            className="pr-24 min-h-[56px] max-h-[200px] resize-none py-4"
-            disabled={disabled}
-          />
-          <div className="absolute right-2 bottom-2 flex items-center gap-1">
-            <input
-              type="file"
-              ref={imageInputRef}
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={handleImageUpload}
-              disabled={disabled || isUploading}
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 rounded-full"
-              onClick={() => imageInputRef.current?.click()}
-              disabled={disabled || isUploading || images.length >= 5}
-            >
-              <ImageIcon className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 rounded-full"
-              disabled={true} // Disabled for now
-            >
-              <Mic className="h-5 w-5" />
-            </Button>
+          </div>
+          
+          <div className="mt-2 text-center text-xs text-gray-500">
+            <p>ChatGPT can make mistakes. Check important info.</p>
           </div>
         </div>
-        <Button
-          className={cn(
-            "h-[56px] w-[56px] rounded-full flex-shrink-0",
-            "bg-primary/90 hover:bg-primary transition-all duration-300",
-            (!message.trim() && images.length === 0) && "opacity-50 cursor-not-allowed"
-          )}
-          onClick={handleSendMessage}
-          disabled={disabled || (!message.trim() && images.length === 0)}
-        >
-          <ArrowUp className="h-5 w-5" />
-        </Button>
       </div>
     </div>
   );

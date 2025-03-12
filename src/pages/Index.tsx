@@ -22,7 +22,7 @@ const Index = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
   const [conversations, setConversations] = useState<{ id: string; title: string; date: Date }[]>([
-    { id: "default", title: "New conversation", date: new Date() }
+    { id: "default", title: "New chat", date: new Date() }
   ]);
   const [activeConversation, setActiveConversation] = useState<string>("default");
 
@@ -45,6 +45,11 @@ const Index = () => {
 
   const processUserMessage = useCallback(async (userMessage: string, userImages?: string[]) => {
     if (!geminiApi) return;
+    
+    // Hide welcome screen when user interacts
+    if (showWelcome) {
+      setShowWelcome(false);
+    }
     
     // Add user message to the chat
     const userMessageObj: Message = {
@@ -81,7 +86,13 @@ const Index = () => {
       
       // Try to generate image if the user appears to be asking for one
       if (shouldGenerateImage) {
-        const imageResult = await enhancedImageGeneration(userMessage);
+        const imageResult = await enhancedImageGeneration(userMessage, {
+          quality: "ultra-high",
+          detailLevel: "16k",
+          style: "photorealistic",
+          aspectRatio: "16:9"
+        });
+        
         if (imageResult.success && imageResult.data) {
           generatedImageUrl = imageResult.data;
           assistantResponse = `Here's the image I generated based on your request:\n\n*${userMessage}*`;
@@ -122,7 +133,7 @@ const Index = () => {
       );
       
       // Update conversation title if this is the first exchange
-      if (messages.length === 0 && conversations.find(c => c.id === activeConversation)?.title === "New conversation") {
+      if (messages.length === 0 && conversations.find(c => c.id === activeConversation)?.title === "New chat") {
         // Create a title based on the first user message
         const title = userMessage.length > 30 
           ? `${userMessage.substring(0, 30)}...` 
@@ -156,24 +167,26 @@ const Index = () => {
     } finally {
       setIsProcessing(false);
     }
-  }, [geminiApi, messages, activeConversation, conversations]);
+  }, [geminiApi, messages, activeConversation, conversations, showWelcome]);
 
   const handleNewChat = () => {
     const newConversationId = generateMessageId();
     setConversations([
       ...conversations,
-      { id: newConversationId, title: "New conversation", date: new Date() }
+      { id: newConversationId, title: "New chat", date: new Date() }
     ]);
     setActiveConversation(newConversationId);
     setMessages([]);
+    setSidebarOpen(false); // Close sidebar on mobile after selecting a chat
   };
 
   const handleApiKeySubmit = (key: string) => {
     setApiKey(key);
+    localStorage.setItem("geminiApiKey", key);
   };
 
   return (
-    <div className="flex h-screen bg-gradient-to-b from-background to-muted/20">
+    <div className="flex h-screen w-full bg-white">
       {apiKey ? (
         <>
           <ChatSidebar
@@ -182,16 +195,16 @@ const Index = () => {
             onNewChat={handleNewChat}
             conversations={conversations}
             activeConversation={activeConversation}
-            setActiveConversation={setActiveConversation}
+            setActiveConversation={(id) => {
+              setActiveConversation(id);
+              setSidebarOpen(false); // Close sidebar on mobile after selecting a chat
+            }}
           />
           
-          <div className={cn(
-            "flex flex-col w-full transition-all duration-300",
-            sidebarOpen ? "md:ml-80" : ""
-          )}>
+          <div className="flex flex-col w-full h-full overflow-hidden">
             <ChatHeader toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
             
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 w-full h-full overflow-hidden">
               <MessageList messages={messages} />
               <ChatInput 
                 onSendMessage={processUserMessage} 
@@ -201,10 +214,22 @@ const Index = () => {
           </div>
           
           {showWelcome && (
-            <InitialWelcome 
-              onDismiss={() => setShowWelcome(false)} 
-              onExampleClick={(text) => processUserMessage(text)}
-            />
+            <div className="fixed inset-0 z-30 flex items-center justify-center bg-white">
+              <div className="text-center space-y-6 max-w-lg px-4">
+                <h1 className="text-4xl font-semibold">What can I help with?</h1>
+                <div className="flex justify-center">
+                  <div className="animate-pulse h-8 w-36 bg-gray-100 rounded-full flex items-center justify-center">
+                    <span className="text-xs text-gray-500">Ask anything...</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowWelcome(false)}
+                  className="text-sm text-gray-500 hover:text-gray-700"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
           )}
         </>
       ) : (
