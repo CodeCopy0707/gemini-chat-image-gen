@@ -60,8 +60,10 @@ const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
   
   return (
     <div className={cn(
-      "message-bubble",
-      role === "user" ? "user" : "assistant"
+      "message-item p-4 mb-4 rounded-lg max-w-[85%]",
+      role === "user" 
+        ? "bg-blue-100 ml-auto text-blue-900" 
+        : "bg-gray-100 mr-auto text-gray-900"
     )}>
       {isLoading ? (
         <div className="flex items-center space-x-2">
@@ -75,7 +77,7 @@ const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
         <div className="message-content">
           {/* Render images if present */}
           {images && images.length > 0 && (
-            <div className="image-grid mb-4">
+            <div className="image-grid mb-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
               {images.map((image, index) => (
                 <img
                   key={index}
@@ -157,7 +159,7 @@ const MessageItem: React.FC<{ message: Message }> = ({ message }) => {
           )}
           
           {/* Render message content with code blocks */}
-          <div className="markdown-content">
+          <div className="markdown-content text-base">
             {contentParts.map((part, index) => (
               <React.Fragment key={index}>
                 <ReactMarkdown>{part}</ReactMarkdown>
@@ -187,7 +189,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages }) => {
   }, [messages]);
   
   return (
-    <div className="message-list p-4 md:p-6 max-w-3xl mx-auto">
+    <div className="messages-container p-4 md:p-6 max-w-3xl mx-auto space-y-6 overflow-y-auto">
       {messages.length === 0 ? (
         <div className="text-center text-gray-500 py-8">
           <p>Start a conversation by typing a message below.</p>

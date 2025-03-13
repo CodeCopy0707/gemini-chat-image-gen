@@ -106,10 +106,6 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
     }
   };
 
-  const toggleOptionsPanel = () => {
-    setShowOptionsPanel(!showOptionsPanel);
-  };
-
   return (
     <div className="input-box">
       <Collapsible 
@@ -156,143 +152,145 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
             </div>
           </div>
         </CollapsibleContent>
-      </Collapsible>
       
-      {images.length > 0 && (
-        <div className="image-preview">
-          {images.map((img, index) => (
-            <div key={index} className="image-preview-item">
-              <img
-                src={img}
-                alt={`Upload ${index + 1}`}
-                className="h-16 w-16 object-cover rounded-md border"
-              />
-              <button
-                className="image-preview-delete"
-                onClick={() => removeImage(index)}
-              >
-                &times;
-              </button>
+        {images.length > 0 && (
+          <div className="image-preview p-2 bg-white border-b">
+            <div className="flex flex-wrap gap-2">
+              {images.map((img, index) => (
+                <div key={index} className="relative">
+                  <img
+                    src={img}
+                    alt={`Upload ${index + 1}`}
+                    className="h-16 w-16 object-cover rounded-md border"
+                  />
+                  <button
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full h-5 w-5 flex items-center justify-center text-xs"
+                    onClick={() => removeImage(index)}
+                  >
+                    &times;
+                  </button>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        )}
       
-      <div className="flex items-end p-2">
-        <div className="relative flex-1">
-          <Textarea
-            ref={textareaRef}
-            value={message}
-            onChange={handleTextareaChange}
-            onKeyDown={handleKeyDown}
-            placeholder="Message Gemini..."
-            className="input-textarea"
-            disabled={disabled}
-          />
-        </div>
-        
-        <div className="flex items-center ml-2">
-          <input
-            type="file"
-            ref={imageInputRef}
-            accept="image/*"
-            multiple
-            className="hidden"
-            onChange={handleImageUpload}
-            disabled={disabled || isUploading}
-          />
+        <div className="flex items-end p-2 bg-white rounded-b-lg">
+          <div className="relative flex-1">
+            <Textarea
+              ref={textareaRef}
+              value={message}
+              onChange={handleTextareaChange}
+              onKeyDown={handleKeyDown}
+              placeholder="Message Gemini..."
+              className="min-h-[44px] resize-none border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={disabled}
+            />
+          </div>
           
-          <div className="flex rounded-lg overflow-hidden">
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn(
-                "h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100",
-                useWebSearch && "text-blue-500 bg-blue-50"
-              )}
-              onClick={() => setUseWebSearch(!useWebSearch)}
-              disabled={disabled}
-              title="Web Search"
-            >
-              <Search className="h-4 w-4" />
-            </Button>
+          <div className="flex items-center ml-2">
+            <input
+              type="file"
+              ref={imageInputRef}
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={handleImageUpload}
+              disabled={disabled || isUploading}
+            />
             
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn(
-                "h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100",
-                useReasoning && "text-amber-500 bg-amber-50"
-              )}
-              onClick={() => setUseReasoning(!useReasoning)}
-              disabled={disabled}
-              title="Reasoning Mode"
-            >
-              <Lightbulb className="h-4 w-4" />
-            </Button>
-            
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn(
-                "h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100",
-                useThinking && "text-purple-500 bg-purple-50"
-              )}
-              onClick={() => setUseThinking(!useThinking)}
-              disabled={disabled}
-              title="Thinking Mode"
-            >
-              <BrainCircuit className="h-4 w-4" />
-            </Button>
-            
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-              onClick={() => imageInputRef.current?.click()}
-              disabled={disabled || isUploading || images.length >= 5}
-              title="Upload Image"
-            >
-              <ImageIcon className="h-4 w-4" />
-            </Button>
-            
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-              disabled={true}
-              title="Voice Input (Coming Soon)"
-            >
-              <Mic className="h-4 w-4" />
-            </Button>
-
-            <CollapsibleTrigger asChild>
+            <div className="flex space-x-1">
               <Button
                 variant="ghost"
                 size="icon"
                 className={cn(
                   "h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100",
-                  showOptionsPanel && "bg-gray-100"
+                  useWebSearch && "text-blue-500 bg-blue-50"
                 )}
-                title="More Options"
+                onClick={() => setUseWebSearch(!useWebSearch)}
+                disabled={disabled}
+                title="Web Search"
               >
-                <Globe className="h-4 w-4" />
+                <Search className="h-4 w-4" />
               </Button>
-            </CollapsibleTrigger>
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100",
+                  useReasoning && "text-amber-500 bg-amber-50"
+                )}
+                onClick={() => setUseReasoning(!useReasoning)}
+                disabled={disabled}
+                title="Reasoning Mode"
+              >
+                <Lightbulb className="h-4 w-4" />
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100",
+                  useThinking && "text-purple-500 bg-purple-50"
+                )}
+                onClick={() => setUseThinking(!useThinking)}
+                disabled={disabled}
+                title="Thinking Mode"
+              >
+                <BrainCircuit className="h-4 w-4" />
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                onClick={() => imageInputRef.current?.click()}
+                disabled={disabled || isUploading || images.length >= 5}
+                title="Upload Image"
+              >
+                <ImageIcon className="h-4 w-4" />
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                disabled={true}
+                title="Voice Input (Coming Soon)"
+              >
+                <Mic className="h-4 w-4" />
+              </Button>
+
+              <CollapsibleTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100",
+                    showOptionsPanel && "bg-gray-100"
+                  )}
+                  title="More Options"
+                >
+                  <Globe className="h-4 w-4" />
+                </Button>
+              </CollapsibleTrigger>
+            </div>
+            
+            <Button
+              className={cn(
+                "h-10 w-10 rounded-full bg-blue-600 text-white hover:bg-blue-700 ml-2",
+                (!message.trim() && images.length === 0) && "opacity-50 cursor-not-allowed"
+              )}
+              onClick={handleSendMessage}
+              disabled={disabled || (!message.trim() && images.length === 0)}
+            >
+              <ArrowUp className="h-5 w-5" />
+            </Button>
           </div>
-          
-          <Button
-            className={cn(
-              "h-10 w-10 rounded-full bg-blue-600 text-white hover:bg-blue-700 ml-2",
-              (!message.trim() && images.length === 0) && "opacity-50 cursor-not-allowed"
-            )}
-            onClick={handleSendMessage}
-            disabled={disabled || (!message.trim() && images.length === 0)}
-          >
-            <ArrowUp className="h-5 w-5" />
-          </Button>
         </div>
-      </div>
+      </Collapsible>
       
       <div className="mt-2 text-center text-xs text-gray-500 px-4 pb-2">
         <p>Gemini may display inaccurate info, including about people, so double-check its responses.</p>
