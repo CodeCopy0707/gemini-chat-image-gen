@@ -1,18 +1,17 @@
-
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowUp, Image as ImageIcon, Mic, Globe, Lightbulb, Search } from "lucide-react";
+import { ArrowUp, Image as ImageIcon, Mic, Globe, Lightbulb, Search, BrainCircuit } from "lucide-react";
 import { useRef, useState, KeyboardEvent, ChangeEvent } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface ChatInputProps {
   onSendMessage: (message: string, options: {
     images?: string[];
     useReasoning?: boolean;
     useWebSearch?: boolean;
+    useThinking?: boolean;
   }) => void;
   disabled?: boolean;
 }
@@ -23,6 +22,7 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
   const [isUploading, setIsUploading] = useState(false);
   const [useReasoning, setUseReasoning] = useState(false);
   const [useWebSearch, setUseWebSearch] = useState(false);
+  const [useThinking, setUseThinking] = useState(false);
   const [showOptionsPanel, setShowOptionsPanel] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -32,7 +32,8 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
       onSendMessage(message, {
         images: images.length > 0 ? images : undefined,
         useReasoning,
-        useWebSearch
+        useWebSearch,
+        useThinking
       });
       setMessage("");
       setImages([]);
@@ -82,7 +83,6 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
       });
     }
     
-    // Clear input value so the same file can be selected again
     if (imageInputRef.current) {
       imageInputRef.current.value = "";
     }
@@ -95,7 +95,6 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
   const handleTextareaChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     setMessage(e.target.value);
     
-    // Auto-resize textarea
     if (textareaRef.current) {
       textareaRef.current.style.height = "24px";
       textareaRef.current.style.height = `${Math.min(
@@ -110,10 +109,10 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t py-4 shadow-md z-10">
+    <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-white/95 backdrop-blur-sm border-t py-4 shadow-md z-10">
       <div className="max-w-3xl mx-auto px-4">
         {showOptionsPanel && (
-          <div className="mb-3 p-3 bg-gray-50 rounded-lg border">
+          <div className="mb-3 p-3 bg-gray-50 rounded-lg border shadow-sm transition-all duration-200 ease-in-out">
             <div className="flex flex-col space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
@@ -128,6 +127,23 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
               </div>
               <div className="text-xs text-gray-600 pl-6">
                 Gemini will use deeper reasoning to answer your question and show its thought process
+              </div>
+              
+              <div className="border-t border-gray-200 my-1"></div>
+              
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <BrainCircuit className="h-4 w-4 text-purple-500" />
+                  <div className="text-sm font-medium">Thinking Mode</div>
+                </div>
+                <Switch 
+                  checked={useThinking} 
+                  onCheckedChange={setUseThinking}
+                  className="data-[state=checked]:bg-purple-500"
+                />
+              </div>
+              <div className="text-xs text-gray-600 pl-6">
+                See the AI's step-by-step thought process before getting the final answer
               </div>
               
               <div className="border-t border-gray-200 my-1"></div>
@@ -173,7 +189,7 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
         )}
         
         <div className="relative">
-          <div className="rounded-xl border border-gray-300 shadow-sm focus-within:ring-1 focus-within:ring-gray-300 bg-white">
+          <div className="rounded-xl border border-gray-300 shadow-sm focus-within:ring-1 focus-within:ring-gray-300 bg-white transition-all duration-200">
             <Textarea
               ref={textareaRef}
               value={message}
@@ -195,16 +211,17 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
                 disabled={disabled || isUploading}
               />
               
-              <div className="flex border rounded-lg overflow-hidden">
+              <div className="flex border rounded-lg overflow-hidden bg-gray-50">
                 <Button
                   variant="ghost"
                   size="icon"
                   className={cn(
-                    "h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700",
+                    "h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100",
                     useWebSearch && "text-blue-500 bg-blue-50"
                   )}
                   onClick={() => setUseWebSearch(!useWebSearch)}
                   disabled={disabled}
+                  title="Web Search"
                 >
                   <Search className="h-4 w-4" />
                 </Button>
@@ -213,11 +230,12 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
                   variant="ghost"
                   size="icon"
                   className={cn(
-                    "h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700",
+                    "h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100",
                     useReasoning && "text-amber-500 bg-amber-50"
                   )}
                   onClick={() => setUseReasoning(!useReasoning)}
                   disabled={disabled}
+                  title="Reasoning Mode"
                 >
                   <Lightbulb className="h-4 w-4" />
                 </Button>
@@ -225,9 +243,24 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700"
+                  className={cn(
+                    "h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100",
+                    useThinking && "text-purple-500 bg-purple-50"
+                  )}
+                  onClick={() => setUseThinking(!useThinking)}
+                  disabled={disabled}
+                  title="Thinking Mode"
+                >
+                  <BrainCircuit className="h-4 w-4" />
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                   onClick={() => imageInputRef.current?.click()}
                   disabled={disabled || isUploading || images.length >= 5}
+                  title="Upload Image"
                 >
                   <ImageIcon className="h-4 w-4" />
                 </Button>
@@ -235,8 +268,9 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700"
+                  className="h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                   disabled={true}
+                  title="Voice Input (Coming Soon)"
                 >
                   <Mic className="h-4 w-4" />
                 </Button>
@@ -245,10 +279,11 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
                   variant="ghost"
                   size="icon"
                   className={cn(
-                    "h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700",
+                    "h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100",
                     showOptionsPanel && "bg-gray-100"
                   )}
                   onClick={toggleOptionsPanel}
+                  title="More Options"
                 >
                   <Globe className="h-4 w-4" />
                 </Button>

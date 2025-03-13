@@ -1,11 +1,13 @@
 
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Image as ImageIcon, ChevronDown, ChevronUp } from "lucide-react";
+import { Image as ImageIcon, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Copy } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
+import CodePreview from "@/components/CodePreview";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export interface Message {
   id: string;
@@ -15,6 +17,7 @@ export interface Message {
   images?: string[];
   isLoading?: boolean;
   reasoning?: string;
+  thinking?: string;
   webSearch?: {
     query: string;
     results: {
@@ -91,6 +94,53 @@ const MessageList = ({ messages }: MessageListProps) => {
     }));
   };
 
+  const renderMarkdown = (content: string) => {
+    // Check if content contains code blocks
+    const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
+    let match;
+    let lastIndex = 0;
+    const elements = [];
+
+    // Process code blocks
+    while ((match = codeBlockRegex.exec(content)) !== null) {
+      // Add text before the code block
+      if (match.index > lastIndex) {
+        const textBeforeCodeBlock = content.substring(lastIndex, match.index);
+        elements.push(
+          <ReactMarkdown key={`text-${lastIndex}`}>
+            {textBeforeCodeBlock}
+          </ReactMarkdown>
+        );
+      }
+
+      // Add the code block with CodePreview component
+      const language = match[1] || 'text';
+      const codeContent = match[2].trim();
+      elements.push(
+        <CodePreview key={`code-${match.index}`} code={codeContent} language={language} />
+      );
+
+      lastIndex = match.index + match[0].length;
+    }
+
+    // Add remaining text after the last code block
+    if (lastIndex < content.length) {
+      const textAfterCodeBlocks = content.substring(lastIndex);
+      elements.push(
+        <ReactMarkdown key={`text-${lastIndex}`}>
+          {textAfterCodeBlocks}
+        </ReactMarkdown>
+      );
+    }
+
+    // If no code blocks were found, render the content as regular markdown
+    if (elements.length === 0) {
+      return <ReactMarkdown>{content}</ReactMarkdown>;
+    }
+
+    return elements;
+  };
+
   if (messages.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center p-6">
@@ -135,7 +185,7 @@ const MessageList = ({ messages }: MessageListProps) => {
                           {message.role === "user" ? "You" : "Gemini"}
                         </div>
                         
-                        {(message.reasoning || (message.webSearch && message.webSearch.results.length > 0)) && (
+                        {(message.reasoning || message.thinking || (message.webSearch && message.webSearch.results.length > 0)) && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -191,19 +241,42 @@ const MessageList = ({ messages }: MessageListProps) => {
                             message.role === "assistant" ? "prose-neutral" : ""
                           )}>
                             {message.role === "assistant" ? (
-                              <ReactMarkdown>{message.content}</ReactMarkdown>
+                              renderMarkdown(message.content)
                             ) : (
                               <p className="text-xl">{message.content}</p>
                             )}
                           </div>
                           
-                          {/* Reasoning section (collapsible) */}
-                          {message.reasoning && isExpanded && (
-                            <div className="mt-4 bg-amber-50 p-4 rounded-md border border-amber-200">
-                              <div className="font-medium text-amber-800 mb-2 text-sm">Reasoning Process:</div>
-                              <div className="prose prose-sm text-amber-900 max-w-none">
-                                <ReactMarkdown>{message.reasoning}</ReactMarkdown>
-                              </div>
+                          {/* Thinking and Reasoning section using Accordion */}
+                          {(message.thinking || message.reasoning) && isExpanded && (
+                            <div className="mt-4">
+                              <Accordion type="single" collapsible className="w-full">
+                                {message.thinking && (
+                                  <AccordionItem value="thinking" className="border rounded-md overflow-hidden bg-blue-50 border-blue-200">
+                                    <AccordionTrigger className="px-4 py-2 text-blue-800 hover:no-underline">
+                                      Thinking Process
+                                    </AccordionTrigger>
+                                    <AccordionContent className="bg-blue-50 px-4 pb-4">
+                                      <div className="prose prose-sm text-blue-900 max-w-none">
+                                        <ReactMarkdown>{message.thinking}</ReactMarkdown>
+                                      </div>
+                                    </AccordionContent>
+                                  </AccordionItem>
+                                )}
+                                
+                                {message.reasoning && (
+                                  <AccordionItem value="reasoning" className="border rounded-md overflow-hidden bg-amber-50 border-amber-200 mt-2">
+                                    <AccordionTrigger className="px-4 py-2 text-amber-800 hover:no-underline">
+                                      Reasoning Process
+                                    </AccordionTrigger>
+                                    <AccordionContent className="bg-amber-50 px-4 pb-4">
+                                      <div className="prose prose-sm text-amber-900 max-w-none">
+                                        <ReactMarkdown>{message.reasoning}</ReactMarkdown>
+                                      </div>
+                                    </AccordionContent>
+                                  </AccordionItem>
+                                )}
+                              </Accordion>
                             </div>
                           )}
                           
@@ -224,6 +297,24 @@ const MessageList = ({ messages }: MessageListProps) => {
                                   </div>
                                 ))}
                               </div>
+                            </div>
+                          )}
+                          
+                          {/* Message feedback buttons */}
+                          {message.role === "assistant" && (
+                            <div className="mt-4 flex items-center space-x-2 text-gray-500">
+                              <Button variant="ghost" size="sm" className="h-8 px-2">
+                                <ThumbsUp className="h-4 w-4 mr-1" />
+                                <span className="text-xs">Helpful</span>
+                              </Button>
+                              <Button variant="ghost" size="sm" className="h-8 px-2">
+                                <ThumbsDown className="h-4 w-4 mr-1" />
+                                <span className="text-xs">Not Helpful</span>
+                              </Button>
+                              <Button variant="ghost" size="sm" className="h-8 px-2">
+                                <Copy className="h-4 w-4 mr-1" />
+                                <span className="text-xs">Copy</span>
+                              </Button>
                             </div>
                           )}
                         </>
