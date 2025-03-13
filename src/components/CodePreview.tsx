@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Copy, PlayCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { Copy, PlayCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
@@ -33,9 +33,9 @@ const CodePreview: React.FC<CodePreviewProps> = ({ code, language }) => {
   const canPreview = language === "html";
   
   return (
-    <div className="code-window mt-4 mb-6">
-      <div className="code-header">
-        <div className="code-language">{language}</div>
+    <div className="relative mt-4 mb-6 overflow-hidden rounded-md border border-gray-200 shadow-sm">
+      <div className="bg-gray-100 rounded-t-md p-2 flex justify-between items-center">
+        <div className="text-sm font-medium text-gray-600">{language}</div>
         <div className="flex gap-2">
           <Button 
             variant="outline" 
@@ -61,29 +61,19 @@ const CodePreview: React.FC<CodePreviewProps> = ({ code, language }) => {
         </div>
       </div>
       
-      <pre className="code-content">
+      <pre className="bg-gray-900 text-gray-100 p-4 overflow-x-auto text-sm">
         <code>{code}</code>
       </pre>
       
-      {canPreview && (
+      {canPreview && showPreview && (
         <Collapsible open={showPreview} className="border-t border-gray-200">
           <CollapsibleContent className="bg-white p-4">
-            <div className="flex justify-between items-center mb-2">
-              <div className="text-sm font-medium">Preview:</div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={togglePreview}
-                className="h-7 w-7 p-0"
-              >
-                {showPreview ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              </Button>
-            </div>
-            <div className="border rounded-md bg-white">
+            <div className="text-sm font-medium mb-2">Preview:</div>
+            <div className="border rounded-md p-4 bg-white">
               <iframe 
                 srcDoc={previewContent}
                 title="HTML Preview"
-                className="preview-iframe"
+                className="w-full min-h-[200px] border-0"
                 sandbox="allow-scripts"
               />
             </div>
