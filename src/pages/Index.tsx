@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import ChatHeader from "@/components/ChatHeader";
 import ChatSidebar from "@/components/ChatSidebar";
-import MessageList from "@/components/MessageList";
+import MessageList, { Message } from "@/components/MessageList";
 import ChatInput from "@/components/ChatInput";
 import { generateMessageId, GeminiApi, prepareMessagesForGemini } from "@/lib/gemini-api";
 import { enhancedImageGeneration, isImageGenerationPrompt } from "@/lib/image-generator";
