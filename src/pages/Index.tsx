@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import ChatHeader from "@/components/ChatHeader";
 import ChatSidebar from "@/components/ChatSidebar";
@@ -11,6 +12,7 @@ import InitialWelcome from "@/components/InitialWelcome";
 import ApiKeyInput from "@/components/ApiKeyInput";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 // Default API key from the project specifications
 const DEFAULT_API_KEY = "AIzaSyBXzTBmok03zex9Xu6BzNEQpiUhP0NFh58";
@@ -51,6 +53,7 @@ const Index = () => {
       images?: string[];
       useReasoning?: boolean;
       useWebSearch?: boolean;
+      useThinking?: boolean;
     } = {}
   ) => {
     if (!geminiApi) return;
@@ -94,6 +97,7 @@ const Index = () => {
       let generatedImageUrl: string | null = null;
       let webSearchResults = null;
       let reasoningProcess = null;
+      let thinkingProcess = null;
       
       // Perform web search if enabled
       if (options.useWebSearch) {
@@ -143,15 +147,29 @@ const Index = () => {
             assistantResponse += "\n\n*Note: I tried to generate an image but encountered an error. I've provided a text response instead.*";
           }
         } else {
-          // Regular text response with optional reasoning
+          // Regular text response with optional reasoning and thinking
           const messageHistory = messages.slice(-10); // Get last 10 messages for context
-          const geminiMessages = prepareMessagesForGemini([
-            ...messageHistory,
-            userMessageObj,
-          ]);
           
+          // If thinking mode is enabled, get thinking process first
+          if (options.useThinking) {
+            const thinkingPrompt = `I need to answer the following question or request: "${userMessage}". 
+            Let me think carefully about how to approach this problem step by step. I'll explore different aspects, consider relevant knowledge, and organize my thoughts.
+            I should show my detailed thought process so that someone can follow my reasoning.`;
+            
+            const thinkingMessages = prepareMessagesForGemini([
+              {
+                id: generateMessageId(),
+                role: "user",
+                content: thinkingPrompt,
+                timestamp: new Date()
+              },
+            ]);
+            
+            thinkingProcess = await geminiApi.generateContent(thinkingMessages);
+          }
+          
+          // If reasoning mode is enabled, get reasoning process
           if (options.useReasoning) {
-            // First get the reasoning process
             const reasoningPrompt = `I need to answer the following question or request: "${userMessage}". 
             Let me think step by step to reach a well-reasoned conclusion. 
             I should consider relevant facts, potential approaches, and logical reasoning.`;
@@ -183,8 +201,30 @@ const Index = () => {
             ]);
             
             assistantResponse = await geminiApi.generateContent(finalMessages);
+          } else if (options.useThinking) {
+            // If only thinking mode is enabled, use that to generate the final response
+            const finalPrompt = `Based on my thinking process: ${thinkingProcess}
+            
+            Now I'll provide a clear, concise, and helpful response to the original question: "${userMessage}"`;
+            
+            const finalMessages = prepareMessagesForGemini([
+              ...messageHistory,
+              {
+                id: generateMessageId(),
+                role: "user", 
+                content: finalPrompt,
+                timestamp: new Date()
+              }
+            ]);
+            
+            assistantResponse = await geminiApi.generateContent(finalMessages);
           } else {
-            // Standard response without reasoning
+            // Standard response without reasoning or thinking
+            const geminiMessages = prepareMessagesForGemini([
+              ...messageHistory,
+              userMessageObj,
+            ]);
+            
             assistantResponse = await geminiApi.generateContent(geminiMessages);
           }
         }
@@ -200,6 +240,7 @@ const Index = () => {
                 isLoading: false,
                 images: generatedImageUrl ? [generatedImageUrl] : undefined,
                 reasoning: options.useReasoning ? reasoningProcess : undefined,
+                thinking: options.useThinking ? thinkingProcess : undefined,
                 webSearch: webSearchResults
               }
             : msg
@@ -278,20 +319,36 @@ const Index = () => {
           <div className="flex flex-col w-full h-full overflow-hidden">
             <ChatHeader toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
             
-            <Collapsible
-              open={!chatSectionCollapsed}
-              onOpenChange={(open) => setChatSectionCollapsed(!open)}
-              className="flex-1 w-full h-full overflow-hidden"
-            >
-              <CollapsibleContent className="h-full">
-                <MessageList messages={messages} />
-              </CollapsibleContent>
+            <div className="flex-1 flex flex-col h-full overflow-hidden">
+              <div className="p-2 bg-white border-b flex justify-between items-center">
+                <div className="text-sm font-medium text-gray-600">Chat History</div>
+                <button 
+                  className="p-1 rounded hover:bg-gray-100" 
+                  onClick={() => setChatSectionCollapsed(!chatSectionCollapsed)}
+                >
+                  {chatSectionCollapsed ? (
+                    <ChevronDown className="h-4 w-4 text-gray-600" />
+                  ) : (
+                    <ChevronUp className="h-4 w-4 text-gray-600" />
+                  )}
+                </button>
+              </div>
+              
+              <Collapsible
+                open={!chatSectionCollapsed}
+                onOpenChange={(open) => setChatSectionCollapsed(!open)}
+                className="flex-1 overflow-hidden"
+              >
+                <CollapsibleContent className="h-full data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden">
+                  <MessageList messages={messages} />
+                </CollapsibleContent>
+              </Collapsible>
               
               <ChatInput 
                 onSendMessage={processUserMessage} 
                 disabled={isProcessing} 
               />
-            </Collapsible>
+            </div>
           </div>
           
           {showWelcome && (

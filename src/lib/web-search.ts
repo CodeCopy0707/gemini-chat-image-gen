@@ -7,7 +7,7 @@ export interface SearchResult {
   description: string;
 }
 
-// Web search implementation using Groq API
+// Real web search implementation using Groq API
 export async function searchWeb(query: string): Promise<SearchResult[]> {
   console.log(`Searching for: ${query}`);
 
