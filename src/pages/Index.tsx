@@ -6,9 +6,11 @@ import MessageList, { Message } from "@/components/MessageList";
 import ChatInput from "@/components/ChatInput";
 import { generateMessageId, GeminiApi, prepareMessagesForGemini } from "@/lib/gemini-api";
 import { enhancedImageGeneration, isImageGenerationPrompt } from "@/lib/image-generator";
+import { searchWeb, summarizeSearchResults } from "@/lib/web-search";
 import { toast } from "sonner";
 import InitialWelcome from "@/components/InitialWelcome";
 import ApiKeyInput from "@/components/ApiKeyInput";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 
 // Default API key from the project specifications
@@ -25,6 +27,7 @@ const Index = () => {
     { id: "default", title: "New chat", date: new Date() }
   ]);
   const [activeConversation, setActiveConversation] = useState<string>("default");
+  const [chatSectionCollapsed, setChatSectionCollapsed] = useState(false);
 
   // Initialize Gemini API with provided key
   useEffect(() => {
@@ -43,7 +46,14 @@ const Index = () => {
     }
   }, []);
 
-  const processUserMessage = useCallback(async (userMessage: string, userImages?: string[]) => {
+  const processUserMessage = useCallback(async (
+    userMessage: string, 
+    options: {
+      images?: string[];
+      useReasoning?: boolean;
+      useWebSearch?: boolean;
+    } = {}
+  ) => {
     if (!geminiApi) return;
     
     // Hide welcome screen when user interacts
@@ -57,7 +67,7 @@ const Index = () => {
       role: "user",
       content: userMessage,
       timestamp: new Date(),
-      images: userImages,
+      images: options.images,
     };
     
     setMessages((prev) => [...prev, userMessageObj]);
@@ -83,39 +93,100 @@ const Index = () => {
       
       let assistantResponse = "";
       let generatedImageUrl: string | null = null;
+      let webSearchResults = null;
+      let reasoningProcess = null;
       
-      // Try to generate image if the user appears to be asking for one
-      if (shouldGenerateImage) {
-        const imageResult = await enhancedImageGeneration(userMessage, {
-          quality: "ultra-high",
-          detailLevel: "16k",
-          style: "photorealistic",
-          aspectRatio: "16:9"
-        });
-        
-        if (imageResult.success && imageResult.data) {
-          generatedImageUrl = imageResult.data;
-          assistantResponse = `Here's the image I generated based on your request:\n\n*${userMessage}*`;
+      // Perform web search if enabled
+      if (options.useWebSearch) {
+        try {
+          console.log("Performing web search for:", userMessage);
+          const searchResults = await searchWeb(userMessage);
+          
+          if (searchResults && searchResults.length > 0) {
+            webSearchResults = {
+              query: userMessage,
+              results: searchResults
+            };
+            
+            // Summarize the search results
+            const searchSummary = await summarizeSearchResults(searchResults, userMessage);
+            assistantResponse = searchSummary;
+          }
+        } catch (error) {
+          console.error("Web search error:", error);
+          toast.error("Error performing web search. Falling back to standard response.");
+        }
+      }
+      
+      // If no web search or web search failed, proceed with standard response
+      if (!assistantResponse) {
+        // Try to generate image if the user appears to be asking for one
+        if (shouldGenerateImage) {
+          const imageResult = await enhancedImageGeneration(userMessage, {
+            quality: "ultra-high",
+            detailLevel: "16k",
+            style: "photorealistic",
+            aspectRatio: "16:9"
+          });
+          
+          if (imageResult.success && imageResult.data) {
+            generatedImageUrl = imageResult.data;
+            assistantResponse = `Here's the image I generated based on your request:\n\n*${userMessage}*`;
+          } else {
+            // If image generation failed, fall back to regular text response
+            const messageHistory = messages.slice(-10); // Get last 10 messages for context
+            const geminiMessages = prepareMessagesForGemini([
+              ...messageHistory,
+              userMessageObj,
+            ]);
+            
+            assistantResponse = await geminiApi.generateContent(geminiMessages);
+            assistantResponse += "\n\n*Note: I tried to generate an image but encountered an error. I've provided a text response instead.*";
+          }
         } else {
-          // If image generation failed, fall back to regular text response
+          // Regular text response with optional reasoning
           const messageHistory = messages.slice(-10); // Get last 10 messages for context
           const geminiMessages = prepareMessagesForGemini([
             ...messageHistory,
             userMessageObj,
           ]);
           
-          assistantResponse = await geminiApi.generateContent(geminiMessages);
-          assistantResponse += "\n\n*Note: I tried to generate an image but encountered an error. I've provided a text response instead.*";
+          if (options.useReasoning) {
+            // First get the reasoning process
+            const reasoningPrompt = `I need to answer the following question or request: "${userMessage}". 
+            Let me think step by step to reach a well-reasoned conclusion. 
+            I should consider relevant facts, potential approaches, and logical reasoning.`;
+            
+            const reasoningMessages = prepareMessagesForGemini([
+              {
+                role: "user",
+                content: reasoningPrompt,
+                timestamp: new Date()
+              },
+            ]);
+            
+            reasoningProcess = await geminiApi.generateContent(reasoningMessages);
+            
+            // Then get the final answer using the reasoning
+            const finalPrompt = `Based on my reasoning: ${reasoningProcess}
+            
+            Here is my concise, helpful response to the original question: "${userMessage}"`;
+            
+            const finalMessages = prepareMessagesForGemini([
+              ...messageHistory,
+              {
+                role: "user", 
+                content: finalPrompt,
+                timestamp: new Date()
+              }
+            ]);
+            
+            assistantResponse = await geminiApi.generateContent(finalMessages);
+          } else {
+            // Standard response without reasoning
+            assistantResponse = await geminiApi.generateContent(geminiMessages);
+          }
         }
-      } else {
-        // Regular text response
-        const messageHistory = messages.slice(-10); // Get last 10 messages for context
-        const geminiMessages = prepareMessagesForGemini([
-          ...messageHistory,
-          userMessageObj,
-        ]);
-        
-        assistantResponse = await geminiApi.generateContent(geminiMessages);
       }
       
       // Update the assistant message with the actual response
@@ -127,6 +198,8 @@ const Index = () => {
                 content: assistantResponse,
                 isLoading: false,
                 images: generatedImageUrl ? [generatedImageUrl] : undefined,
+                reasoning: options.useReasoning ? reasoningProcess : undefined,
+                webSearch: webSearchResults
               }
             : msg
         )
@@ -204,13 +277,20 @@ const Index = () => {
           <div className="flex flex-col w-full h-full overflow-hidden">
             <ChatHeader toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
             
-            <div className="flex-1 w-full h-full overflow-hidden">
-              <MessageList messages={messages} />
+            <Collapsible
+              open={!chatSectionCollapsed}
+              onOpenChange={(open) => setChatSectionCollapsed(!open)}
+              className="flex-1 w-full h-full overflow-hidden"
+            >
+              <CollapsibleContent className="h-full">
+                <MessageList messages={messages} />
+              </CollapsibleContent>
+              
               <ChatInput 
                 onSendMessage={processUserMessage} 
                 disabled={isProcessing} 
               />
-            </div>
+            </Collapsible>
           </div>
           
           {showWelcome && (

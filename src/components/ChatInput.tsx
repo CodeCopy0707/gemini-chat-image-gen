@@ -1,13 +1,19 @@
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowUp, Image as ImageIcon, Mic, Globe, Lightbulb } from "lucide-react";
+import { ArrowUp, Image as ImageIcon, Mic, Globe, Lightbulb, Search } from "lucide-react";
 import { useRef, useState, KeyboardEvent, ChangeEvent } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface ChatInputProps {
-  onSendMessage: (message: string, images?: string[]) => void;
+  onSendMessage: (message: string, options: {
+    images?: string[];
+    useReasoning?: boolean;
+    useWebSearch?: boolean;
+  }) => void;
   disabled?: boolean;
 }
 
@@ -15,12 +21,19 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
   const [message, setMessage] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [useReasoning, setUseReasoning] = useState(false);
+  const [useWebSearch, setUseWebSearch] = useState(false);
+  const [showOptionsPanel, setShowOptionsPanel] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSendMessage = () => {
     if (message.trim() || images.length > 0) {
-      onSendMessage(message, images.length > 0 ? images : undefined);
+      onSendMessage(message, {
+        images: images.length > 0 ? images : undefined,
+        useReasoning,
+        useWebSearch
+      });
       setMessage("");
       setImages([]);
       
@@ -92,9 +105,51 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
     }
   };
 
+  const toggleOptionsPanel = () => {
+    setShowOptionsPanel(!showOptionsPanel);
+  };
+
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white border-t py-4 shadow-md z-10">
       <div className="max-w-3xl mx-auto px-4">
+        {showOptionsPanel && (
+          <div className="mb-3 p-3 bg-gray-50 rounded-lg border">
+            <div className="flex flex-col space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Lightbulb className="h-4 w-4 text-amber-500" />
+                  <div className="text-sm font-medium">Deep Reasoning Mode</div>
+                </div>
+                <Switch 
+                  checked={useReasoning} 
+                  onCheckedChange={setUseReasoning}
+                  className="data-[state=checked]:bg-amber-500"
+                />
+              </div>
+              <div className="text-xs text-gray-600 pl-6">
+                Gemini will use deeper reasoning to answer your question and show its thought process
+              </div>
+              
+              <div className="border-t border-gray-200 my-1"></div>
+              
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Search className="h-4 w-4 text-blue-500" />
+                  <div className="text-sm font-medium">Web Search</div>
+                </div>
+                <Switch 
+                  checked={useWebSearch} 
+                  onCheckedChange={setUseWebSearch}
+                  className="data-[state=checked]:bg-blue-500"
+                />
+              </div>
+              <div className="text-xs text-gray-600 pl-6">
+                Use web search to get up-to-date information for your queries
+              </div>
+            </div>
+          </div>
+        )}
+        
         {images.length > 0 && (
           <div className="mb-2 flex items-center gap-2 overflow-x-auto thin-scrollbar py-2">
             {images.map((img, index) => (
@@ -144,6 +199,32 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
                 <Button
                   variant="ghost"
                   size="icon"
+                  className={cn(
+                    "h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700",
+                    useWebSearch && "text-blue-500 bg-blue-50"
+                  )}
+                  onClick={() => setUseWebSearch(!useWebSearch)}
+                  disabled={disabled}
+                >
+                  <Search className="h-4 w-4" />
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700",
+                    useReasoning && "text-amber-500 bg-amber-50"
+                  )}
+                  onClick={() => setUseReasoning(!useReasoning)}
+                  disabled={disabled}
+                >
+                  <Lightbulb className="h-4 w-4" />
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="icon"
                   className="h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700"
                   onClick={() => imageInputRef.current?.click()}
                   disabled={disabled || isUploading || images.length >= 5}
@@ -163,10 +244,13 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700"
-                  disabled={true}
+                  className={cn(
+                    "h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700",
+                    showOptionsPanel && "bg-gray-100"
+                  )}
+                  onClick={toggleOptionsPanel}
                 >
-                  <Lightbulb className="h-4 w-4" />
+                  <Globe className="h-4 w-4" />
                 </Button>
               </div>
               
