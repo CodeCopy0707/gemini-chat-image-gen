@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import ChatHeader from "@/components/ChatHeader";
 import ChatSidebar from "@/components/ChatSidebar";
-import MessageList, { Message } from "@/components/MessageList";
+import MessageList from "@/components/MessageList";
 import ChatInput from "@/components/ChatInput";
 import { generateMessageId, GeminiApi, prepareMessagesForGemini } from "@/lib/gemini-api";
 import { enhancedImageGeneration, isImageGenerationPrompt } from "@/lib/image-generator";
@@ -299,7 +299,7 @@ const Index = () => {
   };
 
   return (
-    <div className="flex h-screen bg-white">
+    <div className="chat-layout">
       {apiKey ? (
         <>
           <ChatSidebar
@@ -314,18 +314,18 @@ const Index = () => {
             }}
           />
           
-          <div className="flex flex-col flex-1 h-full overflow-hidden">
+          <div className="main-content">
             <ChatHeader toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
             
             <div className={cn(
-              "flex-1 overflow-y-auto",
+              "messages-container thin-scrollbar",
               chatSectionCollapsed && "hidden"
             )}>
               <MessageList messages={messages} />
             </div>
             
-            <div className="border-t border-gray-200 bg-white">
-              <div className="mx-auto max-w-3xl p-4">
+            <div className="fixed-input-container">
+              <div className="max-w-3xl mx-auto w-full">
                 <ChatInput 
                   onSendMessage={processUserMessage} 
                   disabled={isProcessing} 
@@ -335,23 +335,20 @@ const Index = () => {
           </div>
           
           {showWelcome && (
-            <div className="absolute inset-0 bg-white bg-opacity-95 flex items-center justify-center z-50">
-              <div className="max-w-md p-8 rounded-xl bg-white shadow-lg">
-                <h1 className="text-2xl font-bold text-center mb-4">Welcome to Gemini AI Chat</h1>
-                <p className="text-center text-gray-600 mb-8">Ask me anything or start exploring the available features below.</p>
-                <div className="flex flex-col space-y-4">
+            <div className="welcome-screen">
+              <div className="welcome-content">
+                <h1>Welcome to Gemini AI Chat</h1>
+                <p>Ask me anything or start exploring the available features below.</p>
+                <div className="flex flex-col space-y-4 mt-8">
                   <button 
-                    className="w-full py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                    className="primary-button"
                     onClick={() => setShowWelcome(false)}
                   >
                     Start New Chat
                   </button>
                   <button
-                    className="w-full py-2 px-4 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-50 transition-colors"
-                    onClick={() => {
-                      processUserMessage("Tell me about yourself and what you can do.");
-                      setShowWelcome(false);
-                    }}
+                    className="ghost-button"
+                    onClick={() => processUserMessage("Tell me about yourself and what you can do.")}
                   >
                     Get to know Gemini
                   </button>
@@ -361,9 +358,7 @@ const Index = () => {
           )}
         </>
       ) : (
-        <div className="w-full h-full flex items-center justify-center">
-          <ApiKeyInput onSubmit={handleApiKeySubmit} />
-        </div>
+        <ApiKeyInput onSubmit={handleApiKeySubmit} />
       )}
     </div>
   );
