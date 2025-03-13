@@ -301,7 +301,7 @@ const Index = () => {
   };
 
   return (
-    <div className="flex h-screen w-full bg-white">
+    <div className="flex h-screen w-full bg-gray-50 overflow-hidden">
       {apiKey ? (
         <>
           <ChatSidebar
@@ -316,14 +316,14 @@ const Index = () => {
             }}
           />
           
-          <div className="flex flex-col w-full h-full overflow-hidden">
+          <div className="flex flex-col w-full h-full overflow-hidden bg-white">
             <ChatHeader toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
             
             <div className="flex-1 flex flex-col h-full overflow-hidden">
-              <div className="p-2 bg-white border-b flex justify-between items-center">
+              <div className="p-2 bg-gradient-to-r from-gray-50 to-white border-b flex justify-between items-center">
                 <div className="text-sm font-medium text-gray-600">Chat History</div>
                 <button 
-                  className="p-1 rounded hover:bg-gray-100" 
+                  className="p-1 rounded hover:bg-gray-100 transition-colors" 
                   onClick={() => setChatSectionCollapsed(!chatSectionCollapsed)}
                 >
                   {chatSectionCollapsed ? (
@@ -344,11 +344,13 @@ const Index = () => {
                 </CollapsibleContent>
               </Collapsible>
               
-              <ChatInput 
-                onSendMessage={processUserMessage} 
-                disabled={isProcessing} 
-              />
+              <div className="h-32"></div> {/* Spacer for fixed chat input */}
             </div>
+            
+            <ChatInput 
+              onSendMessage={processUserMessage} 
+              disabled={isProcessing} 
+            />
           </div>
           
           {showWelcome && (
