@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import ChatHeader from "@/components/ChatHeader";
 import ChatSidebar from "@/components/ChatSidebar";
-import MessageList, { Message } from "@/components/MessageList";
+import MessageList from "@/components/MessageList";
 import ChatInput from "@/components/ChatInput";
 import { generateMessageId, GeminiApi, prepareMessagesForGemini } from "@/lib/gemini-api";
 import { enhancedImageGeneration, isImageGenerationPrompt } from "@/lib/image-generator";
@@ -10,9 +10,7 @@ import { searchWeb, summarizeSearchResults } from "@/lib/web-search";
 import { toast } from "sonner";
 import InitialWelcome from "@/components/InitialWelcome";
 import ApiKeyInput from "@/components/ApiKeyInput";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
-import { ChevronDown, ChevronUp } from "lucide-react";
 
 // Default API key from the project specifications
 const DEFAULT_API_KEY = "AIzaSyBXzTBmok03zex9Xu6BzNEQpiUhP0NFh58";
@@ -64,9 +62,9 @@ const Index = () => {
     }
     
     // Add user message to the chat
-    const userMessageObj: Message = {
+    const userMessageObj = {
       id: generateMessageId(),
-      role: "user",
+      role: "user" as const,
       content: userMessage,
       timestamp: new Date(),
       images: options.images,
@@ -86,7 +84,7 @@ const Index = () => {
         ...prev,
         {
           id: assistantMessageId,
-          role: "assistant",
+          role: "assistant" as const,
           content: "",
           timestamp: new Date(),
           isLoading: true,
@@ -301,7 +299,7 @@ const Index = () => {
   };
 
   return (
-    <div className="flex h-screen w-full bg-gray-50 overflow-hidden">
+    <div className="chat-layout">
       {apiKey ? (
         <>
           <ChatSidebar
@@ -316,58 +314,45 @@ const Index = () => {
             }}
           />
           
-          <div className="flex flex-col w-full h-full overflow-hidden bg-white">
+          <div className="main-content">
             <ChatHeader toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
             
-            <div className="flex-1 flex flex-col h-full overflow-hidden">
-              <div className="p-2 bg-gradient-to-r from-gray-50 to-white border-b flex justify-between items-center">
-                <div className="text-sm font-medium text-gray-600">Chat History</div>
-                <button 
-                  className="p-1 rounded hover:bg-gray-100 transition-colors" 
-                  onClick={() => setChatSectionCollapsed(!chatSectionCollapsed)}
-                >
-                  {chatSectionCollapsed ? (
-                    <ChevronDown className="h-4 w-4 text-gray-600" />
-                  ) : (
-                    <ChevronUp className="h-4 w-4 text-gray-600" />
-                  )}
-                </button>
-              </div>
-              
-              <Collapsible
-                open={!chatSectionCollapsed}
-                onOpenChange={(open) => setChatSectionCollapsed(!open)}
-                className="flex-1 overflow-hidden"
-              >
-                <CollapsibleContent className="h-full data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden">
-                  <MessageList messages={messages} />
-                </CollapsibleContent>
-              </Collapsible>
-              
-              <div className="h-32"></div> {/* Spacer for fixed chat input */}
+            <div className={cn(
+              "messages-container thin-scrollbar",
+              chatSectionCollapsed && "hidden"
+            )}>
+              <MessageList messages={messages} />
             </div>
             
-            <ChatInput 
-              onSendMessage={processUserMessage} 
-              disabled={isProcessing} 
-            />
+            <div className="fixed-input-container">
+              <div className="max-w-3xl mx-auto w-full">
+                <ChatInput 
+                  onSendMessage={processUserMessage} 
+                  disabled={isProcessing} 
+                />
+              </div>
+            </div>
           </div>
           
           {showWelcome && (
-            <div className="fixed inset-0 z-30 flex items-center justify-center bg-white">
-              <div className="text-center space-y-6 max-w-lg px-4">
-                <h1 className="text-4xl font-semibold">What can I help with?</h1>
-                <div className="flex justify-center">
-                  <div className="animate-pulse h-8 w-36 bg-gray-100 rounded-full flex items-center justify-center">
-                    <span className="text-xs text-gray-500">Ask anything...</span>
-                  </div>
+            <div className="welcome-screen">
+              <div className="welcome-content">
+                <h1>Welcome to Gemini AI Chat</h1>
+                <p>Ask me anything or start exploring the available features below.</p>
+                <div className="flex flex-col space-y-4 mt-8">
+                  <button 
+                    className="primary-button"
+                    onClick={() => setShowWelcome(false)}
+                  >
+                    Start New Chat
+                  </button>
+                  <button
+                    className="ghost-button"
+                    onClick={() => processUserMessage("Tell me about yourself and what you can do.")}
+                  >
+                    Get to know Gemini
+                  </button>
                 </div>
-                <button
-                  onClick={() => setShowWelcome(false)}
-                  className="text-sm text-gray-500 hover:text-gray-700"
-                >
-                  Dismiss
-                </button>
               </div>
             </div>
           )}

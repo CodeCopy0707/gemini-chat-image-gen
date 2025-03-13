@@ -1,9 +1,12 @@
 
-import { v4 as uuidv4 } from "uuid";
-import { toast } from "sonner";
-import { Message } from "@/components/MessageList";
+import { v4 as uuidv4 } from 'uuid';
+import { Message } from '@/components/MessageList';
 
-// Types
+const DEFAULT_MODEL = "gemini-pro";
+const VISION_MODEL = "gemini-pro-vision";
+const API_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
+
+// Define the structure expected by the Gemini API
 export interface GeminiMessage {
   role: "user" | "model";
   parts: {
@@ -15,145 +18,109 @@ export interface GeminiMessage {
   }[];
 }
 
-interface GeminiRequest {
-  contents: GeminiMessage[];
-  generationConfig?: {
-    temperature?: number;
-    topK?: number;
-    topP?: number;
-    maxOutputTokens?: number;
-    stopSequences?: string[];
-  };
-  safetySettings?: {
-    category: string;
-    threshold: string;
-  }[];
-  tools?: any[];
-}
-
-interface GeminiResponse {
-  candidates: {
-    content: {
-      parts: {
-        text: string;
-      }[];
-    };
-    finishReason: string;
-    safetyRatings: {
-      category: string;
-      probability: string;
-    }[];
-  }[];
-  promptFeedback?: {
-    blockReason?: string;
-    safetyRatings: {
-      category: string;
-      probability: string;
-    }[];
-  };
-}
-
 export class GeminiApi {
   private apiKey: string;
-  private apiUrl: string;
-  private abortController: AbortController | null = null;
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
-    this.apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
   }
 
-  public cancelRequest() {
-    if (this.abortController) {
-      this.abortController.abort();
-      this.abortController = null;
-    }
+  // Convert our app's message format to Gemini API format
+  private formatMessages(messages: GeminiMessage[]): any[] {
+    return messages.map(message => ({
+      role: message.role,
+      parts: message.parts
+    }));
   }
 
-  public async generateContent(messages: GeminiMessage[]): Promise<string> {
-    this.abortController = new AbortController();
+  // Generate content using the Gemini API
+  async generateContent(
+    messages: GeminiMessage[],
+    options: {
+      model?: string;
+      temperature?: number;
+      topK?: number;
+      topP?: number;
+      maxOutputTokens?: number;
+    } = {}
+  ): Promise<string> {
+    const {
+      model = DEFAULT_MODEL,
+      temperature = 0.7,
+      topK = 40,
+      topP = 0.95,
+      maxOutputTokens = 8192,
+    } = options;
+
+    // Determine if we need to use the vision model (if any message contains an image)
+    const useVisionModel = messages.some(message => 
+      message.parts.some(part => part.inlineData?.mimeType?.startsWith('image/'))
+    );
+
+    const actualModel = useVisionModel ? VISION_MODEL : model;
     
-    try {
-      const requestBody: GeminiRequest = {
-        contents: messages,
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 8192,
-        },
-      };
+    const requestBody = {
+      contents: this.formatMessages(messages),
+      generationConfig: {
+        temperature,
+        topK,
+        topP,
+        maxOutputTokens,
+      },
+    };
 
+    try {
       const response = await fetch(
-        `${this.apiUrl}?key=${this.apiKey}`,
+        `${API_ENDPOINT}/${actualModel}:generateContent?key=${this.apiKey}`,
         {
-          method: "POST",
+          method: 'POST',
           headers: {
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify(requestBody),
-          signal: this.abortController.signal,
         }
       );
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error("Gemini API Error:", errorData);
-        throw new Error(errorData.error?.message || "Failed to generate content");
+        throw new Error(
+          `Gemini API Error: ${errorData.error?.message || response.statusText}`
+        );
       }
 
-      const data = await response.json() as GeminiResponse;
+      const data = await response.json();
       
-      // Check if the response was blocked
-      if (data.promptFeedback?.blockReason) {
-        throw new Error(`Content blocked: ${data.promptFeedback.blockReason}`);
-      }
-      
-      // Check if we have candidates
       if (!data.candidates || data.candidates.length === 0) {
-        throw new Error("No response generated");
+        return "I'm sorry, I couldn't generate a response for that.";
       }
-      
-      // Get the text from the first candidate
-      const textContent = data.candidates[0].content.parts
-        .map(part => part.text || "")
-        .join("");
-        
-      return textContent;
-    } catch (error: any) {
-      // Don't throw if it was cancelled by user
-      if (error.name === "AbortError") {
-        return "Request cancelled";
-      }
-      
-      // Log and re-throw the error
-      console.error("Error calling Gemini API:", error);
-      toast.error(`Error: ${error.message || "Failed to generate content"}`);
+
+      // Extract the text content from the response
+      return data.candidates[0].content.parts
+        .map((part: any) => part.text || '')
+        .join('');
+    } catch (error) {
+      console.error('Error calling Gemini API:', error);
       throw error;
-    } finally {
-      this.abortController = null;
     }
   }
 }
 
-// Helper function to convert base64 images to format needed by Gemini
+// Utility function to prepare messages for Gemini API
 export function prepareMessagesForGemini(messages: Message[]): GeminiMessage[] {
-  return messages.map((msg) => {
-    // Convert our message format to Gemini's format
-    const role = msg.role === "assistant" ? "model" : "user";
-    
-    const parts: GeminiMessage["parts"] = [];
-    
-    // Add images if there are any (only for user messages)
-    if (msg.role === "user" && msg.images && msg.images.length > 0) {
-      msg.images.forEach((imageDataUrl) => {
+  return messages.map(message => {
+    const geminiMessage: GeminiMessage = {
+      role: message.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: message.content }],
+    };
+
+    // If message has images, add them as parts
+    if (message.images && message.images.length > 0) {
+      message.images.forEach(imageUrl => {
         // Extract base64 data from the data URL
-        const base64Data = imageDataUrl.split(",")[1];
-        
-        // Determine mime type
-        const mimeType = imageDataUrl.split(";")[0].split(":")[1];
-        
-        parts.push({
+        const base64Data = imageUrl.split(',')[1];
+        const mimeType = imageUrl.split(';')[0].split(':')[1];
+
+        geminiMessage.parts.push({
           inlineData: {
             mimeType,
             data: base64Data,
@@ -161,17 +128,12 @@ export function prepareMessagesForGemini(messages: Message[]): GeminiMessage[] {
         });
       });
     }
-    
-    // Add text content
-    if (msg.content.trim()) {
-      parts.push({ text: msg.content });
-    }
-    
-    return { role, parts };
+
+    return geminiMessage;
   });
 }
 
-// Utility for generating a random message ID
+// Generate a unique message ID
 export function generateMessageId(): string {
   return uuidv4();
 }
