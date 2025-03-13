@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import ChatHeader from "@/components/ChatHeader";
 import ChatSidebar from "@/components/ChatSidebar";
@@ -159,6 +158,7 @@ const Index = () => {
             
             const reasoningMessages = prepareMessagesForGemini([
               {
+                id: generateMessageId(),
                 role: "user",
                 content: reasoningPrompt,
                 timestamp: new Date()
@@ -175,6 +175,7 @@ const Index = () => {
             const finalMessages = prepareMessagesForGemini([
               ...messageHistory,
               {
+                id: generateMessageId(),
                 role: "user", 
                 content: finalPrompt,
                 timestamp: new Date()

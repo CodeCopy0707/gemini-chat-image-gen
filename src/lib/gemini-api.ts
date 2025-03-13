@@ -1,6 +1,6 @@
-
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
+import { Message } from "@/components/MessageList";
 
 // Types
 export interface GeminiMessage {
@@ -136,13 +136,7 @@ export class GeminiApi {
 }
 
 // Helper function to convert base64 images to format needed by Gemini
-export function prepareMessagesForGemini(
-  messages: {
-    role: "user" | "assistant";
-    content: string;
-    images?: string[];
-  }[]
-): GeminiMessage[] {
+export function prepareMessagesForGemini(messages: Message[]): GeminiMessage[] {
   return messages.map((msg) => {
     // Convert our message format to Gemini's format
     const role = msg.role === "assistant" ? "model" : "user";
