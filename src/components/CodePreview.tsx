@@ -16,6 +16,7 @@ const CodePreview: React.FC<CodePreviewProps> = ({ code, language }) => {
   
   useEffect(() => {
     if (language === "html" && showPreview) {
+      // For HTML, create a preview of the code
       setPreviewContent(code);
     }
   }, [code, language, showPreview]);
@@ -33,14 +34,14 @@ const CodePreview: React.FC<CodePreviewProps> = ({ code, language }) => {
   const canPreview = language === "html";
   
   return (
-    <div className="relative mt-4 mb-6 overflow-hidden rounded-md border border-gray-200 shadow-sm">
+    <div className="relative mt-4 mb-6">
       <div className="bg-gray-100 rounded-t-md p-2 flex justify-between items-center">
         <div className="text-sm font-medium text-gray-600">{language}</div>
         <div className="flex gap-2">
           <Button 
             variant="outline" 
             size="sm" 
-            className="h-8 px-2 text-xs bg-white"
+            className="h-8 px-2 text-xs"
             onClick={copyToClipboard}
           >
             <Copy className="h-3.5 w-3.5 mr-1" />
@@ -51,7 +52,7 @@ const CodePreview: React.FC<CodePreviewProps> = ({ code, language }) => {
             <Button 
               variant="outline" 
               size="sm" 
-              className="h-8 px-2 text-xs bg-white"
+              className="h-8 px-2 text-xs"
               onClick={togglePreview}
             >
               <PlayCircle className="h-3.5 w-3.5 mr-1" />
@@ -61,12 +62,12 @@ const CodePreview: React.FC<CodePreviewProps> = ({ code, language }) => {
         </div>
       </div>
       
-      <pre className="bg-gray-900 text-gray-100 p-4 overflow-x-auto text-sm">
+      <pre className="bg-gray-900 text-gray-100 p-4 rounded-b-md overflow-x-auto">
         <code>{code}</code>
       </pre>
       
       {canPreview && showPreview && (
-        <Collapsible open={showPreview} className="border-t border-gray-200">
+        <Collapsible open={showPreview} className="mt-4 border rounded-md overflow-hidden">
           <CollapsibleContent className="bg-white p-4">
             <div className="text-sm font-medium mb-2">Preview:</div>
             <div className="border rounded-md p-4 bg-white">
