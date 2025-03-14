@@ -4,15 +4,13 @@ import ChatHeader from "@/components/ChatHeader";
 import ChatSidebar from "@/components/ChatSidebar";
 import MessageList, { Message } from "@/components/MessageList";
 import ChatInput from "@/components/ChatInput";
+import RoleSelector, { Role } from "@/components/RoleSelector";
 import { generateMessageId, GeminiApi, prepareMessagesForGemini } from "@/lib/gemini-api";
 import { enhancedImageGeneration, isImageGenerationPrompt } from "@/lib/image-generator";
 import { searchWeb, summarizeSearchResults } from "@/lib/web-search";
 import { toast } from "sonner";
-import InitialWelcome from "@/components/InitialWelcome";
 import ApiKeyInput from "@/components/ApiKeyInput";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { cn } from "@/lib/utils";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { PlusCircle, Search, Lightbulb, Mic, Settings } from "lucide-react";
 
 // Default API key from the project specifications
 const DEFAULT_API_KEY = "AIzaSyBXzTBmok03zex9Xu6BzNEQpiUhP0NFh58";
@@ -28,7 +26,7 @@ const Index = () => {
     { id: "default", title: "New chat", date: new Date() }
   ]);
   const [activeConversation, setActiveConversation] = useState<string>("default");
-  const [chatSectionCollapsed, setChatSectionCollapsed] = useState(false);
+  const [activeRole, setActiveRole] = useState<Role | null>(null);
 
   // Initialize Gemini API with provided key
   useEffect(() => {
@@ -46,6 +44,14 @@ const Index = () => {
       setApiKey(DEFAULT_API_KEY);
     }
   }, []);
+
+  const handleRoleSelect = (role: Role) => {
+    setActiveRole(role);
+    // If we already have messages, let the user know the role has changed
+    if (messages.length > 0) {
+      toast.info(`Role changed to ${role.name}. New messages will use this role.`);
+    }
+  };
 
   const processUserMessage = useCallback(async (
     userMessage: string, 
@@ -99,6 +105,12 @@ const Index = () => {
       let reasoningProcess = null;
       let thinkingProcess = null;
       
+      // Prepare system prompt with role information
+      let rolePrompt = "";
+      if (activeRole) {
+        rolePrompt = `You are acting as ${activeRole.name}. ${activeRole.description}\n\n`;
+      }
+      
       // Perform web search if enabled
       if (options.useWebSearch) {
         try {
@@ -138,10 +150,20 @@ const Index = () => {
           } else {
             // If image generation failed, fall back to regular text response
             const messageHistory = messages.slice(-10); // Get last 10 messages for context
-            const geminiMessages = prepareMessagesForGemini([
-              ...messageHistory,
-              userMessageObj,
-            ]);
+            
+            // Inject role information if available
+            const systemMessage = rolePrompt ? {
+              id: generateMessageId(),
+              role: "user",
+              content: rolePrompt,
+              timestamp: new Date()
+            } : null;
+            
+            const geminiMessages = prepareMessagesForGemini(
+              systemMessage 
+                ? [systemMessage, ...messageHistory, userMessageObj]
+                : [...messageHistory, userMessageObj]
+            );
             
             assistantResponse = await geminiApi.generateContent(geminiMessages);
             assistantResponse += "\n\n*Note: I tried to generate an image but encountered an error. I've provided a text response instead.*";
@@ -150,6 +172,14 @@ const Index = () => {
           // Regular text response with optional reasoning and thinking
           const messageHistory = messages.slice(-10); // Get last 10 messages for context
           
+          // Inject role information if available
+          const systemMessage = rolePrompt ? {
+            id: generateMessageId(),
+            role: "user",
+            content: rolePrompt,
+            timestamp: new Date()
+          } : null;
+          
           // If thinking mode is enabled, get thinking process first
           if (options.useThinking) {
             const thinkingPrompt = `I need to answer the following question or request: "${userMessage}". 
@@ -157,6 +187,7 @@ const Index = () => {
             I should show my detailed thought process so that someone can follow my reasoning.`;
             
             const thinkingMessages = prepareMessagesForGemini([
+              ...(systemMessage ? [systemMessage] : []),
               {
                 id: generateMessageId(),
                 role: "user",
@@ -175,6 +206,7 @@ const Index = () => {
             I should consider relevant facts, potential approaches, and logical reasoning.`;
             
             const reasoningMessages = prepareMessagesForGemini([
+              ...(systemMessage ? [systemMessage] : []),
               {
                 id: generateMessageId(),
                 role: "user",
@@ -191,6 +223,7 @@ const Index = () => {
             Here is my concise, helpful response to the original question: "${userMessage}"`;
             
             const finalMessages = prepareMessagesForGemini([
+              ...(systemMessage ? [systemMessage] : []),
               ...messageHistory,
               {
                 id: generateMessageId(),
@@ -208,6 +241,7 @@ const Index = () => {
             Now I'll provide a clear, concise, and helpful response to the original question: "${userMessage}"`;
             
             const finalMessages = prepareMessagesForGemini([
+              ...(systemMessage ? [systemMessage] : []),
               ...messageHistory,
               {
                 id: generateMessageId(),
@@ -221,6 +255,7 @@ const Index = () => {
           } else {
             // Standard response without reasoning or thinking
             const geminiMessages = prepareMessagesForGemini([
+              ...(systemMessage ? [systemMessage] : []),
               ...messageHistory,
               userMessageObj,
             ]);
@@ -282,7 +317,7 @@ const Index = () => {
     } finally {
       setIsProcessing(false);
     }
-  }, [geminiApi, messages, activeConversation, conversations, showWelcome]);
+  }, [geminiApi, messages, activeConversation, conversations, showWelcome, activeRole]);
 
   const handleNewChat = () => {
     const newConversationId = generateMessageId();
@@ -292,7 +327,8 @@ const Index = () => {
     ]);
     setActiveConversation(newConversationId);
     setMessages([]);
-    setSidebarOpen(false); // Close sidebar on mobile after selecting a chat
+    setSidebarOpen(false);
+    setShowWelcome(true);
   };
 
   const handleApiKeySubmit = (key: string) => {
@@ -312,65 +348,71 @@ const Index = () => {
             activeConversation={activeConversation}
             setActiveConversation={(id) => {
               setActiveConversation(id);
-              setSidebarOpen(false); // Close sidebar on mobile after selecting a chat
+              setSidebarOpen(false);
             }}
           />
           
           <div className="flex flex-col w-full h-full overflow-hidden bg-white">
-            <ChatHeader toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
-            
-            <div className="flex-1 flex flex-col h-full overflow-hidden">
-              <div className="p-2 bg-gradient-to-r from-gray-50 to-white border-b flex justify-between items-center">
-                <div className="text-sm font-medium text-gray-600">Chat History</div>
+            <div className="border-b bg-white flex items-center justify-between px-4 py-2 shadow-sm">
+              <div className="flex items-center">
                 <button 
-                  className="p-1 rounded hover:bg-gray-100 transition-colors" 
-                  onClick={() => setChatSectionCollapsed(!chatSectionCollapsed)}
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="p-2 rounded-md hover:bg-gray-100 transition-colors mr-2"
                 >
-                  {chatSectionCollapsed ? (
-                    <ChevronDown className="h-4 w-4 text-gray-600" />
-                  ) : (
-                    <ChevronUp className="h-4 w-4 text-gray-600" />
-                  )}
+                  <PlusCircle className="h-5 w-5 text-gray-600" />
                 </button>
+                <h1 className="text-lg font-medium text-gray-800">ChatGPT</h1>
               </div>
               
-              <Collapsible
-                open={!chatSectionCollapsed}
-                onOpenChange={(open) => setChatSectionCollapsed(!open)}
-                className="flex-1 overflow-hidden"
-              >
-                <CollapsibleContent className="h-full data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden">
-                  <MessageList messages={messages} />
-                </CollapsibleContent>
-              </Collapsible>
-              
-              <div className="h-32"></div> {/* Spacer for fixed chat input */}
+              <div className="flex items-center gap-2">
+                <RoleSelector onRoleSelect={handleRoleSelect} activeRole={activeRole} />
+                <button className="p-2 rounded-md hover:bg-gray-100 transition-colors">
+                  <Settings className="h-5 w-5 text-gray-600" />
+                </button>
+              </div>
             </div>
             
-            <ChatInput 
-              onSendMessage={processUserMessage} 
-              disabled={isProcessing} 
-            />
-          </div>
-          
-          {showWelcome && (
-            <div className="fixed inset-0 z-30 flex items-center justify-center bg-white">
-              <div className="text-center space-y-6 max-w-lg px-4">
-                <h1 className="text-4xl font-semibold">What can I help with?</h1>
-                <div className="flex justify-center">
-                  <div className="animate-pulse h-8 w-36 bg-gray-100 rounded-full flex items-center justify-center">
-                    <span className="text-xs text-gray-500">Ask anything...</span>
+            <div className="flex-1 overflow-hidden flex flex-col">
+              {showWelcome ? (
+                <div className="welcome-container">
+                  <h1 className="welcome-title">What can I help with?</h1>
+                  <div className="input-container">
+                    <span className="input-placeholder">Ask anything...</span>
+                  </div>
+                  <div className="controls-row mt-6">
+                    <button className="control-button">
+                      <Search className="h-4 w-4" />
+                      Web Search
+                    </button>
+                    <button className="control-button">
+                      <Lightbulb className="h-4 w-4" />
+                      Reasoning
+                    </button>
+                    <button className="control-button">
+                      <Mic className="h-4 w-4" />
+                      Voice
+                    </button>
                   </div>
                 </div>
-                <button
-                  onClick={() => setShowWelcome(false)}
-                  className="text-sm text-gray-500 hover:text-gray-700"
-                >
-                  Dismiss
-                </button>
+              ) : (
+                <div className="flex-1 overflow-y-auto thin-scrollbar chat-messages">
+                  <MessageList messages={messages} />
+                </div>
+              )}
+            </div>
+            
+            <div className="p-4 border-t">
+              <div className="chat-input-container">
+                <ChatInput 
+                  onSendMessage={processUserMessage} 
+                  disabled={isProcessing} 
+                />
+                <div className="footer-text mt-2">
+                  ChatGPT may display inaccurate info, including about people, so double-check its responses.
+                </div>
               </div>
             </div>
-          )}
+          </div>
         </>
       ) : (
         <ApiKeyInput onSubmit={handleApiKeySubmit} />
