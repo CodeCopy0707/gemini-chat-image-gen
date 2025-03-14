@@ -152,7 +152,7 @@ const Index = () => {
             const messageHistory = messages.slice(-10); // Get last 10 messages for context
             
             // Inject role information if available
-            const systemMessage = rolePrompt ? {
+            const systemMessage: Message | null = rolePrompt ? {
               id: generateMessageId(),
               role: "user",
               content: rolePrompt,
@@ -173,7 +173,7 @@ const Index = () => {
           const messageHistory = messages.slice(-10); // Get last 10 messages for context
           
           // Inject role information if available
-          const systemMessage = rolePrompt ? {
+          const systemMessage: Message | null = rolePrompt ? {
             id: generateMessageId(),
             role: "user",
             content: rolePrompt,
@@ -303,7 +303,7 @@ const Index = () => {
       // Update the assistant message with an error
       setMessages((prev) =>
         prev.map((msg) =>
-          msg.id === generateMessageId()
+          msg.id === assistantMessageId
             ? {
                 ...msg,
                 content: "I'm sorry, I encountered an error processing your request. Please try again.",

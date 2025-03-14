@@ -5,7 +5,6 @@ import { PlusCircle, Send, Image as ImageIcon, Mic, Globe, Lightbulb, Search, Br
 import { useRef, useState, KeyboardEvent, ChangeEvent } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { Switch } from "@/components/ui/switch";
 
 interface ChatInputProps {
   onSendMessage: (message: string, options: {
