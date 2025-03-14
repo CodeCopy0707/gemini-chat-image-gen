@@ -149,7 +149,7 @@ const Index = () => {
             assistantResponse = `Here's the image I generated based on your request:\n\n*${userMessage}*`;
           } else {
             // If image generation failed, fall back to regular text response
-            const messageHistory = messages.slice(-10); // Get last 10 messages for context
+            const messageHistory = messages.slice(-100); // Get last 100 messages for context
             
             // Inject role information if available
             const systemMessage: Message | null = rolePrompt ? {
@@ -170,7 +170,7 @@ const Index = () => {
           }
         } else {
           // Regular text response with optional reasoning and thinking
-          const messageHistory = messages.slice(-10); // Get last 10 messages for context
+          const messageHistory = messages.slice(-100); // Get last 100 messages for context
           
           // Inject role information if available
           const systemMessage: Message | null = rolePrompt ? {
@@ -395,9 +395,7 @@ const Index = () => {
                   </div>
                 </div>
               ) : (
-                <div className="flex-1 overflow-y-auto thin-scrollbar chat-messages">
-                  <MessageList messages={messages} />
-                </div>
+                <MessageList messages={messages} />
               )}
             </div>
             
