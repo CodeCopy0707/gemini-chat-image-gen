@@ -134,7 +134,7 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
           onChange={handleTextareaChange}
           onKeyDown={handleKeyDown}
           placeholder="Ask anything..."
-          className="min-h-[24px] max-h-[120px] resize-none py-3 px-4 border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-xl shadow-none"
+          className="h-[30px] max-h-[120px] resize-none py-3 px-4 border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-xl shadow-none"
           disabled={disabled}
         />
         
