@@ -8,6 +8,7 @@ import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import CodePreview from "@/components/CodePreview";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 export interface Message {
   id: string;
@@ -250,26 +251,28 @@ const MessageList = ({ messages }: MessageListProps) => {
                         )}
                       </div>
                       
-                      {/* Tools Used section */}
+                      {/* Tools Used section - FIX: Wrap in Accordion */}
                       {message.toolsUsed && isExpanded && (
                         <div className="mt-2">
-                          <AccordionItem value="tools" className="border rounded-md overflow-hidden bg-indigo-50 border-indigo-200">
-                            <AccordionTrigger className="px-3 py-1 text-xs text-indigo-800 hover:no-underline">
-                              <div className="flex items-center">
-                                <Wand2 className="h-3 w-3 mr-1" />
-                                <span>Tool: {message.toolsUsed.toolType}</span>
-                              </div>
-                            </AccordionTrigger>
-                            <AccordionContent className="bg-indigo-50 px-3 pb-3">
-                              <div className="prose prose-xs text-indigo-900 max-w-none">
-                                {message.toolsUsed.explanation && (
-                                  <div className="mb-2 text-indigo-700 italic text-xs">
-                                    {message.toolsUsed.explanation}
-                                  </div>
-                                )}
-                              </div>
-                            </AccordionContent>
-                          </AccordionItem>
+                          <Accordion type="single" collapsible className="w-full">
+                            <AccordionItem value="tools" className="border rounded-md overflow-hidden bg-indigo-50 border-indigo-200">
+                              <AccordionTrigger className="px-3 py-1 text-xs text-indigo-800 hover:no-underline">
+                                <div className="flex items-center">
+                                  <Wand2 className="h-3 w-3 mr-1" />
+                                  <span>Tool: {message.toolsUsed.toolType}</span>
+                                </div>
+                              </AccordionTrigger>
+                              <AccordionContent className="bg-indigo-50 px-3 pb-3">
+                                <div className="prose prose-xs text-indigo-900 max-w-none">
+                                  {message.toolsUsed.toolResults.explanation && (
+                                    <div className="mb-2 text-indigo-700 italic text-xs">
+                                      {message.toolsUsed.toolResults.explanation}
+                                    </div>
+                                  )}
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                          </Accordion>
                         </div>
                       )}
                       
