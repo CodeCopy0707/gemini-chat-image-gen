@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { KeyRound } from "lucide-react";
 
 interface ApiKeyInputProps {
@@ -29,14 +29,14 @@ const ApiKeyInput = ({ onSubmit }: ApiKeyInputProps) => {
   };
 
   // If API key is already stored, retrieve it
-  useState(() => {
+  useEffect(() => {
     const storedApiKey = localStorage.getItem("geminiApiKey");
     if (storedApiKey) {
       setApiKey(storedApiKey);
       onSubmit(storedApiKey);
       setShowForm(false);
     }
-  });
+  }, [onSubmit]);
 
   if (!showForm) {
     return (

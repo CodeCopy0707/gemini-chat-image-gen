@@ -63,7 +63,13 @@ async function buildCustomTool(
     // In a real implementation, you would use a more sophisticated approach to build tools dynamically
     // Here we're simulating it with a structured prompt
     const apiKey = localStorage.getItem("geminiApiKey");
-    if (!apiKey) throw new Error("API key not available");
+    if (!apiKey) {
+      return {
+        result: `I wanted to create a specialized ${toolType} tool to handle your request, but I couldn't access the API key needed to build it.`,
+        explanation: "The tool creation process failed due to missing API key.",
+        needsAdditionalProcessing: true
+      };
+    }
     
     const geminiApi = new GeminiApi(apiKey);
     const response = await geminiApi.generateContent([{
@@ -124,7 +130,13 @@ async function executeCalculator(userMessage: string): Promise<ToolResponse> {
   
   try {
     const apiKey = localStorage.getItem("geminiApiKey");
-    if (!apiKey) throw new Error("API key not available");
+    if (!apiKey) {
+      return {
+        result: "I tried to use a calculator tool to solve your problem, but couldn't access the API key needed to process it.",
+        explanation: "The calculator couldn't be used due to missing API key.",
+        needsAdditionalProcessing: true
+      };
+    }
     
     const geminiApi = new GeminiApi(apiKey);
     const response = await geminiApi.generateContent([{
@@ -187,7 +199,13 @@ async function executeCodeRunner(userMessage: string): Promise<ToolResponse> {
   
   try {
     const apiKey = localStorage.getItem("geminiApiKey");
-    if (!apiKey) throw new Error("API key not available");
+    if (!apiKey) {
+      return {
+        result: "I tried to use a code execution tool to solve your problem, but couldn't access the API key needed to process it.",
+        explanation: "The code execution tool couldn't be used due to missing API key.",
+        needsAdditionalProcessing: true
+      };
+    }
     
     const geminiApi = new GeminiApi(apiKey);
     const response = await geminiApi.generateContent([{
@@ -248,7 +266,14 @@ async function executeTranslator(userMessage: string): Promise<ToolResponse> {
   
   try {
     const apiKey = localStorage.getItem("geminiApiKey");
-    if (!apiKey) throw new Error("API key not available");
+    if (!apiKey) {
+      console.error("API key not available for translator tool");
+      return {
+        result: "I tried to use a translation tool to process your request, but couldn't access the API key needed for translation.",
+        explanation: "The translation tool couldn't be used due to missing API key.",
+        needsAdditionalProcessing: true
+      };
+    }
     
     const geminiApi = new GeminiApi(apiKey);
     const response = await geminiApi.generateContent([{
@@ -311,7 +336,13 @@ async function executeDataAnalysis(userMessage: string): Promise<ToolResponse> {
   
   try {
     const apiKey = localStorage.getItem("geminiApiKey");
-    if (!apiKey) throw new Error("API key not available");
+    if (!apiKey) {
+      return {
+        result: "I tried to use a data analysis tool to process your request, but couldn't access the API key needed for analysis.",
+        explanation: "The data analysis tool couldn't be used due to missing API key.",
+        needsAdditionalProcessing: true
+      };
+    }
     
     const geminiApi = new GeminiApi(apiKey);
     const response = await geminiApi.generateContent([{
@@ -371,7 +402,13 @@ async function executeSummarizer(userMessage: string): Promise<ToolResponse> {
   
   try {
     const apiKey = localStorage.getItem("geminiApiKey");
-    if (!apiKey) throw new Error("API key not available");
+    if (!apiKey) {
+      return {
+        result: "I tried to use a summarization tool to process your request, but couldn't access the API key needed for summarization.",
+        explanation: "The summarization tool couldn't be used due to missing API key.",
+        needsAdditionalProcessing: true
+      };
+    }
     
     const geminiApi = new GeminiApi(apiKey);
     const response = await geminiApi.generateContent([{
