@@ -60,6 +60,15 @@ async function executeTimeService(userMessage: string): Promise<ToolResponse> {
     // Format the time data in a readable way
     const timeInfo = timeZones.map(tz => `**${tz.name}**: ${tz.time}`).join('\n');
     
+    // Calculate date information
+    const startOfYear = new Date(now.getFullYear(), 0, 0);
+    const diff = now.getTime() - startOfYear.getTime();
+    const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
+    
+    const weekNumber = Math.ceil(
+      (dayOfYear + startOfYear.getDay() + 1) / 7
+    );
+    
     // Add date information
     const dateInfo = `
 **Date Components**:
@@ -67,8 +76,8 @@ async function executeTimeService(userMessage: string): Promise<ToolResponse> {
 - Month: ${now.getMonth() + 1}
 - Year: ${now.getFullYear()}
 - Day of Week: ${now.toLocaleString('en-US', { weekday: 'long' })}
-- Day of Year: ${Math.floor((now - new Date(now.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24))}
-- Week of Year: ${Math.ceil((((now - new Date(now.getFullYear(), 0, 0)) / 86400000) + new Date(now.getFullYear(), 0, 0).getDay() + 1) / 7)}
+- Day of Year: ${dayOfYear}
+- Week of Year: ${weekNumber}
     `;
     
     // Generate the final result
