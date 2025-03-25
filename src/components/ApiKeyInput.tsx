@@ -4,12 +4,15 @@ import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
 import { KeyRound } from "lucide-react";
 
+// Default API key to use 
+const DEFAULT_API_KEY = "AIzaSyDc7u7wTVdDG3zP18xnELKs0HX7-hImkmc";
+
 interface ApiKeyInputProps {
   onSubmit: (apiKey: string) => void;
 }
 
 const ApiKeyInput = ({ onSubmit }: ApiKeyInputProps) => {
-  const [apiKey, setApiKey] = useState("");
+  const [apiKey, setApiKey] = useState(DEFAULT_API_KEY);
   const [showForm, setShowForm] = useState(true);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -24,7 +27,7 @@ const ApiKeyInput = ({ onSubmit }: ApiKeyInputProps) => {
 
   const handleResetApiKey = () => {
     localStorage.removeItem("geminiApiKey");
-    setApiKey("");
+    setApiKey(DEFAULT_API_KEY);
     setShowForm(true);
   };
 
@@ -34,6 +37,11 @@ const ApiKeyInput = ({ onSubmit }: ApiKeyInputProps) => {
     if (storedApiKey) {
       setApiKey(storedApiKey);
       onSubmit(storedApiKey);
+      setShowForm(false);
+    } else {
+      // If no stored key, use the default and submit it
+      localStorage.setItem("geminiApiKey", DEFAULT_API_KEY);
+      onSubmit(DEFAULT_API_KEY);
       setShowForm(false);
     }
   }, [onSubmit]);
@@ -68,7 +76,7 @@ const ApiKeyInput = ({ onSubmit }: ApiKeyInputProps) => {
           <div className="space-y-2">
             <Input
               type="password"
-              placeholder="AIzaSyBXzTBmok03zex9Xu6BzNEQpiUhP0NFh58..."
+              placeholder="API key starts with AIzaSy..."
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               className="w-full"

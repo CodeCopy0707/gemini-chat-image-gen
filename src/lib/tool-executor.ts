@@ -1,4 +1,3 @@
-
 import { generateMessageId, GeminiApi } from "@/lib/gemini-api";
 
 interface ToolResponse {
@@ -6,6 +5,9 @@ interface ToolResponse {
   explanation?: string;
   needsAdditionalProcessing: boolean;
 }
+
+// Default API key to use if none is found in localStorage
+const DEFAULT_API_KEY = "AIzaSyDc7u7wTVdDG3zP18xnELKs0HX7-hImkmc";
 
 /**
  * Executes a request using the appropriate specialized tool
@@ -27,9 +29,19 @@ export async function executeToolRequest(
       return await executeDataAnalysis(userMessage);
     case "summarizer":
       return await executeSummarizer(userMessage);
+    case "time-service":
+      return await executeTimeService(userMessage);
     default:
       return buildCustomTool(userMessage, toolType);
   }
+}
+
+/**
+ * Get API key from localStorage or use default
+ */
+function getApiKey(): string {
+  const storedApiKey = localStorage.getItem("geminiApiKey");
+  return storedApiKey || DEFAULT_API_KEY;
 }
 
 /**
@@ -60,16 +72,8 @@ async function buildCustomTool(
   `;
   
   try {
-    // In a real implementation, you would use a more sophisticated approach to build tools dynamically
-    // Here we're simulating it with a structured prompt
-    const apiKey = localStorage.getItem("geminiApiKey");
-    if (!apiKey) {
-      return {
-        result: `I wanted to create a specialized ${toolType} tool to handle your request, but I couldn't access the API key needed to build it.`,
-        explanation: "The tool creation process failed due to missing API key.",
-        needsAdditionalProcessing: true
-      };
-    }
+    // Always use the API key from getApiKey()
+    const apiKey = getApiKey();
     
     const geminiApi = new GeminiApi(apiKey);
     const response = await geminiApi.generateContent([{
@@ -109,6 +113,68 @@ async function buildCustomTool(
 }
 
 /**
+ * Executes a time service tool
+ */
+async function executeTimeService(userMessage: string): Promise<ToolResponse> {
+  console.log("Executing time service for:", userMessage);
+  
+  const timeServicePrompt = `
+  Act as a time service tool. For this user request:
+  "${userMessage}"
+  
+  1. Identify if the user is asking about current time, time zones, or time calculations
+  2. Provide accurate time information based on the request
+  3. If needed, show time calculations or time zone conversions
+  
+  Return your response in this JSON format:
+  {
+    "request": "summarize what time information the user is asking for",
+    "currentTime": "the current time in relevant format",
+    "timeZones": "relevant time zone information if needed",
+    "calculations": "any time calculations performed",
+    "additionalInfo": "any other relevant time-related information"
+  }
+  `;
+  
+  try {
+    // Always use the API key from getApiKey()
+    const apiKey = getApiKey();
+    
+    const geminiApi = new GeminiApi(apiKey);
+    const response = await geminiApi.generateContent([{
+      role: "user",
+      parts: [{text: timeServicePrompt}]
+    }]);
+    
+    try {
+      // Extract the JSON from the response
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const result = JSON.parse(jsonMatch[0]);
+        return {
+          result: `# Time Service Results\n\n**Request:** ${result.request}\n\n**Current Time:** ${result.currentTime}\n\n${result.timeZones ? `**Time Zones:** ${result.timeZones}\n\n` : ''}${result.calculations ? `**Calculations:** ${result.calculations}\n\n` : ''}${result.additionalInfo ? `**Additional Information:** ${result.additionalInfo}` : ''}`,
+          needsAdditionalProcessing: false
+        };
+      }
+    } catch (parseError) {
+      console.error("Error parsing time service response:", parseError);
+    }
+    
+    // Fallback if JSON parsing fails
+    return {
+      result: `I used a time service tool to process your request. Here's what I found:\n\n${response}`,
+      needsAdditionalProcessing: false
+    };
+  } catch (error) {
+    console.error("Error executing time service:", error);
+    return {
+      result: "I tried to use a time service tool to process your request, but encountered an error.",
+      needsAdditionalProcessing: true
+    };
+  }
+}
+
+/**
  * Executes a calculator tool
  */
 async function executeCalculator(userMessage: string): Promise<ToolResponse> {
@@ -129,14 +195,8 @@ async function executeCalculator(userMessage: string): Promise<ToolResponse> {
   `;
   
   try {
-    const apiKey = localStorage.getItem("geminiApiKey");
-    if (!apiKey) {
-      return {
-        result: "I tried to use a calculator tool to solve your problem, but couldn't access the API key needed to process it.",
-        explanation: "The calculator couldn't be used due to missing API key.",
-        needsAdditionalProcessing: true
-      };
-    }
+    // Always use the API key from getApiKey()
+    const apiKey = getApiKey();
     
     const geminiApi = new GeminiApi(apiKey);
     const response = await geminiApi.generateContent([{
@@ -198,14 +258,8 @@ async function executeCodeRunner(userMessage: string): Promise<ToolResponse> {
   `;
   
   try {
-    const apiKey = localStorage.getItem("geminiApiKey");
-    if (!apiKey) {
-      return {
-        result: "I tried to use a code execution tool to solve your problem, but couldn't access the API key needed to process it.",
-        explanation: "The code execution tool couldn't be used due to missing API key.",
-        needsAdditionalProcessing: true
-      };
-    }
+    // Always use the API key from getApiKey()
+    const apiKey = getApiKey();
     
     const geminiApi = new GeminiApi(apiKey);
     const response = await geminiApi.generateContent([{
@@ -265,15 +319,8 @@ async function executeTranslator(userMessage: string): Promise<ToolResponse> {
   `;
   
   try {
-    const apiKey = localStorage.getItem("geminiApiKey");
-    if (!apiKey) {
-      console.error("API key not available for translator tool");
-      return {
-        result: "I tried to use a translation tool to process your request, but couldn't access the API key needed for translation.",
-        explanation: "The translation tool couldn't be used due to missing API key.",
-        needsAdditionalProcessing: true
-      };
-    }
+    // Always use the API key from getApiKey()
+    const apiKey = getApiKey();
     
     const geminiApi = new GeminiApi(apiKey);
     const response = await geminiApi.generateContent([{
@@ -335,14 +382,8 @@ async function executeDataAnalysis(userMessage: string): Promise<ToolResponse> {
   `;
   
   try {
-    const apiKey = localStorage.getItem("geminiApiKey");
-    if (!apiKey) {
-      return {
-        result: "I tried to use a data analysis tool to process your request, but couldn't access the API key needed for analysis.",
-        explanation: "The data analysis tool couldn't be used due to missing API key.",
-        needsAdditionalProcessing: true
-      };
-    }
+    // Always use the API key from getApiKey()
+    const apiKey = getApiKey();
     
     const geminiApi = new GeminiApi(apiKey);
     const response = await geminiApi.generateContent([{
@@ -401,14 +442,8 @@ async function executeSummarizer(userMessage: string): Promise<ToolResponse> {
   `;
   
   try {
-    const apiKey = localStorage.getItem("geminiApiKey");
-    if (!apiKey) {
-      return {
-        result: "I tried to use a summarization tool to process your request, but couldn't access the API key needed for summarization.",
-        explanation: "The summarization tool couldn't be used due to missing API key.",
-        needsAdditionalProcessing: true
-      };
-    }
+    // Always use the API key from getApiKey()
+    const apiKey = getApiKey();
     
     const geminiApi = new GeminiApi(apiKey);
     const response = await geminiApi.generateContent([{

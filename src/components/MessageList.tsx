@@ -46,6 +46,47 @@ const MessageList = ({ messages }: MessageListProps) => {
   const [imagesLoaded, setImagesLoaded] = useState<Record<string, boolean>>({});
   const [expandedMessages, setExpandedMessages] = useState<Record<string, boolean>>({});
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [typingMessages, setTypingMessages] = useState<Record<string, { text: string, isComplete: boolean }>>({});
+
+  // Set up the typing animation for new assistant messages
+  useEffect(() => {
+    messages.forEach(message => {
+      if (message.role === "assistant" && !message.isLoading && !typingMessages[message.id]) {
+        // Initialize new message for typing animation
+        setTypingMessages(prev => ({
+          ...prev,
+          [message.id]: { text: "", isComplete: false }
+        }));
+        
+        // Start the typing animation
+        let charIndex = 0;
+        const typeInterval = setInterval(() => {
+          if (charIndex < message.content.length) {
+            setTypingMessages(prev => ({
+              ...prev,
+              [message.id]: {
+                text: message.content.substring(0, charIndex + 1),
+                isComplete: false
+              }
+            }));
+            charIndex++;
+          } else {
+            // Typing complete
+            setTypingMessages(prev => ({
+              ...prev,
+              [message.id]: {
+                text: message.content,
+                isComplete: true
+              }
+            }));
+            clearInterval(typeInterval);
+          }
+        }, 10); // Speed of typing animation - lower number = faster
+        
+        return () => clearInterval(typeInterval);
+      }
+    });
+  }, [messages]);
 
   // Enhanced auto-scroll with smooth behavior
   useEffect(() => {
@@ -77,7 +118,7 @@ const MessageList = ({ messages }: MessageListProps) => {
         return () => scrollableDiv.removeEventListener('scroll', handleScroll);
       }
     }
-  }, [messages, imagesLoaded]);
+  }, [messages, imagesLoaded, typingMessages]);
 
   const scrollToBottom = () => {
     if (scrollAreaRef.current) {
@@ -169,6 +210,11 @@ const MessageList = ({ messages }: MessageListProps) => {
                                       (message.webSearch && message.webSearch.results.length > 0) ||
                                       message.toolsUsed;
           
+          // Get the text to display - either typing animation or full content
+          const displayContent = message.role === "assistant" && !message.isLoading 
+            ? (typingMessages[message.id]?.text || message.content) 
+            : message.content;
+            
           return (
             <div
               key={message.id}
@@ -245,13 +291,19 @@ const MessageList = ({ messages }: MessageListProps) => {
                         message.role === "assistant" ? "prose-neutral" : ""
                       )}>
                         {message.role === "assistant" ? (
-                          renderMarkdown(message.content)
+                          renderMarkdown(displayContent)
                         ) : (
-                          <p>{message.content}</p>
+                          <p>{displayContent}</p>
+                        )}
+                        {/* Show typing cursor if assistant is still typing */}
+                        {message.role === "assistant" && 
+                          typingMessages[message.id] && 
+                          !typingMessages[message.id].isComplete && (
+                          <span className="typing-cursor">|</span>
                         )}
                       </div>
                       
-                      {/* Tools Used section - FIX: Wrap in Accordion */}
+                      {/* Tools Used section */}
                       {message.toolsUsed && isExpanded && (
                         <div className="mt-2">
                           <Accordion type="single" collapsible className="w-full">
@@ -360,6 +412,20 @@ const MessageList = ({ messages }: MessageListProps) => {
           <ChevronDown className="h-4 w-4" />
         </Button>
       )}
+      
+      <style jsx global>{`
+        .typing-cursor {
+          display: inline-block;
+          animation: blink 1s step-start infinite;
+          margin-left: 1px;
+        }
+        
+        @keyframes blink {
+          50% {
+            opacity: 0;
+          }
+        }
+      `}</style>
     </div>
   );
 };
