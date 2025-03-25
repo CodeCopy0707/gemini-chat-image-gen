@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Icons } from "@/components/icons";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import ReactMarkdown from "react-markdown";
 import CodePreview from "./CodePreview";
-import { Lightbulb, Search, BrainCircuit, Wrench, Globe } from "lucide-react";
+import { Lightbulb, Search, BrainCircuit, Tool, Globe } from "lucide-react";
 
 export interface Message {
   id: string;
@@ -121,9 +120,9 @@ const MessageList: React.FC<MessageListProps> = ({ messages }) => {
             ) : (
               <ReactMarkdown
                 components={{
-                  code({ node, className, children, ...props }) {
+                  code({ node, inline, className, children, ...props }) {
                     const match = /language-(\w+)/.exec(className || "");
-                    return !className?.includes("inline") && match ? (
+                    return !inline && match ? (
                       <CodePreview
                         code={String(children).replace(/\n$/, "")}
                         language={match[1]}
@@ -187,6 +186,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages }) => {
                     return <td className="border px-4 py-2">{children}</td>;
                   },
                 }}
+                className="prose prose-sm max-w-none prose-pre:my-0"
               >
                 {message.role === "assistant" 
                   ? displayedContents[message.id] || ""
@@ -218,7 +218,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages }) => {
                       </AccordionTrigger>
                       <AccordionContent>
                         <div className="text-xs text-gray-700 bg-gray-50 p-3 rounded overflow-auto max-h-64">
-                          <ReactMarkdown>
+                          <ReactMarkdown className="prose prose-sm max-w-none">
                             {message.reasoning}
                           </ReactMarkdown>
                         </div>
@@ -235,7 +235,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages }) => {
                       </AccordionTrigger>
                       <AccordionContent>
                         <div className="text-xs text-gray-700 bg-gray-50 p-3 rounded overflow-auto max-h-64">
-                          <ReactMarkdown>
+                          <ReactMarkdown className="prose prose-sm max-w-none">
                             {message.thinking}
                           </ReactMarkdown>
                         </div>
@@ -279,7 +279,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages }) => {
                   <Accordion type="single" collapsible className="w-full">
                     <AccordionItem value="toolsused">
                       <AccordionTrigger className="text-xs flex items-center gap-2 text-gray-500 hover:text-gray-700">
-                        <Wrench className="h-3 w-3" /> Tools Used: {message.toolsUsed.toolType}
+                        <Tool className="h-3 w-3" /> Tools Used: {message.toolsUsed.toolType}
                       </AccordionTrigger>
                       <AccordionContent>
                         <div className="text-xs text-gray-700 bg-gray-50 p-3 rounded overflow-auto max-h-64">
