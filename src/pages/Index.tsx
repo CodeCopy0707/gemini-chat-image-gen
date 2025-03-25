@@ -10,7 +10,8 @@ import { enhancedImageGeneration, isImageGenerationPrompt } from "@/lib/image-ge
 import { searchWeb, summarizeSearchResults } from "@/lib/web-search";
 import { toast } from "sonner";
 import ApiKeyInput from "@/components/ApiKeyInput";
-import { PlusCircle, Search, Lightbulb, Mic, Settings } from "lucide-react";
+import { PlusCircle, Search, Lightbulb, Mic, Settings, BrainCircuit } from "lucide-react";
+import { executeToolRequest } from "@/lib/tool-executor";
 
 // Default API key from the project specifications
 const DEFAULT_API_KEY = "AIzaSyBXzTBmok03zex9Xu6BzNEQpiUhP0NFh58";
@@ -27,6 +28,7 @@ const Index = () => {
   ]);
   const [activeConversation, setActiveConversation] = useState<string>("default");
   const [activeRole, setActiveRole] = useState<Role | null>(null);
+  const [toolsUsed, setToolsUsed] = useState<string[]>([]);
 
   // Initialize Gemini API with provided key
   useEffect(() => {
@@ -104,6 +106,7 @@ const Index = () => {
       let webSearchResults = null;
       let reasoningProcess = null;
       let thinkingProcess = null;
+      let toolsInfo = null;
       
       // Prepare system prompt with role information
       let rolePrompt = "";
@@ -111,44 +114,98 @@ const Index = () => {
         rolePrompt = `You are acting as ${activeRole.name}. ${activeRole.description}\n\n`;
       }
       
-      // Perform web search if enabled
-      if (options.useWebSearch) {
+      // Check if the message requires a specialized tool
+      const toolRequest = await checkForToolRequest(userMessage);
+      if (toolRequest.needsTool) {
         try {
-          console.log("Performing web search for:", userMessage);
-          const searchResults = await searchWeb(userMessage);
+          const toolResponse = await executeToolRequest(userMessage, toolRequest.toolType);
+          toolsInfo = {
+            toolType: toolRequest.toolType,
+            toolCreated: true,
+            toolResults: toolResponse
+          };
           
-          if (searchResults && searchResults.length > 0) {
-            webSearchResults = {
-              query: userMessage,
-              results: searchResults
-            };
-            
-            // Summarize the search results
-            const searchSummary = await summarizeSearchResults(searchResults, userMessage);
-            assistantResponse = searchSummary;
+          // Add tool info to the assistant's response
+          assistantResponse = `I needed to use a specialized tool to answer your question about ${toolRequest.toolType}.\n\n${toolResponse.result}\n\n`;
+          if (toolResponse.explanation) {
+            assistantResponse += `Note: ${toolResponse.explanation}`;
           }
+          
+          // Track tools we've used
+          setToolsUsed(prev => [...prev, toolRequest.toolType]);
         } catch (error) {
-          console.error("Web search error:", error);
-          toast.error("Error performing web search. Falling back to standard response.");
+          console.error("Tool execution error:", error);
+          assistantResponse = `I identified that your request might need a specialized ${toolRequest.toolType} tool, but I encountered an error when trying to process it. I'll try to answer with my general knowledge instead.\n\n`;
         }
       }
       
-      // If no web search or web search failed, proceed with standard response
-      if (!assistantResponse) {
-        // Try to generate image if the user appears to be asking for one
-        if (shouldGenerateImage) {
-          const imageResult = await enhancedImageGeneration(userMessage, {
-            quality: "ultra-high",
-            detailLevel: "16k",
-            style: "photorealistic",
-            aspectRatio: "16:9"
-          });
-          
-          if (imageResult.success && imageResult.data) {
-            generatedImageUrl = imageResult.data;
-            assistantResponse = `Here's the image I generated based on your request:\n\n*${userMessage}*`;
+      // If no tool response was generated or we need additional information
+      if (!toolsInfo || toolsInfo.toolResults.needsAdditionalProcessing) {
+        // Perform web search if enabled
+        if (options.useWebSearch) {
+          try {
+            console.log("Performing web search for:", userMessage);
+            const searchResults = await searchWeb(userMessage);
+            
+            if (searchResults && searchResults.length > 0) {
+              webSearchResults = {
+                query: userMessage,
+                results: searchResults
+              };
+              
+              // Summarize the search results
+              const searchSummary = await summarizeSearchResults(searchResults, userMessage);
+              
+              // If we already have some tool response, append the search results
+              if (assistantResponse) {
+                assistantResponse += `\n\nI also searched the web for additional information:\n\n${searchSummary}`;
+              } else {
+                assistantResponse = searchSummary;
+              }
+            }
+          } catch (error) {
+            console.error("Web search error:", error);
+            toast.error("Error performing web search. Falling back to standard response.");
+          }
+        }
+        
+        // If no web search or tool response, or if they failed, proceed with standard response
+        if (!assistantResponse) {
+          // Try to generate image if the user appears to be asking for one
+          if (shouldGenerateImage) {
+            const imageResult = await enhancedImageGeneration(userMessage, {
+              quality: "ultra-high",
+              detailLevel: "16k",
+              style: "photorealistic",
+              aspectRatio: "16:9"
+            });
+            
+            if (imageResult.success && imageResult.data) {
+              generatedImageUrl = imageResult.data;
+              assistantResponse = `Here's the image I generated based on your request:\n\n*${userMessage}*`;
+            } else {
+              // If image generation failed, fall back to regular text response
+              const messageHistory = messages.slice(-100); // Get last 100 messages for context
+              
+              // Inject role information if available
+              const systemMessage: Message | null = rolePrompt ? {
+                id: generateMessageId(),
+                role: "user",
+                content: rolePrompt,
+                timestamp: new Date()
+              } : null;
+              
+              const geminiMessages = prepareMessagesForGemini(
+                systemMessage 
+                  ? [systemMessage, ...messageHistory, userMessageObj]
+                  : [...messageHistory, userMessageObj]
+              );
+              
+              assistantResponse = await geminiApi.generateContent(geminiMessages);
+              assistantResponse += "\n\n*Note: I tried to generate an image but encountered an error. I've provided a text response instead.*";
+            }
           } else {
-            // If image generation failed, fall back to regular text response
+            // Regular text response with optional reasoning and thinking
             const messageHistory = messages.slice(-100); // Get last 100 messages for context
             
             // Inject role information if available
@@ -159,108 +216,88 @@ const Index = () => {
               timestamp: new Date()
             } : null;
             
-            const geminiMessages = prepareMessagesForGemini(
-              systemMessage 
-                ? [systemMessage, ...messageHistory, userMessageObj]
-                : [...messageHistory, userMessageObj]
-            );
+            // If thinking mode is enabled, get thinking process first
+            if (options.useThinking) {
+              const thinkingPrompt = `I need to answer the following question or request: "${userMessage}". 
+              Let me think carefully about how to approach this problem step by step. I'll explore different aspects, consider relevant knowledge, and organize my thoughts.
+              I should show my detailed thought process so that someone can follow my reasoning.`;
+              
+              const thinkingMessages = prepareMessagesForGemini([
+                ...(systemMessage ? [systemMessage] : []),
+                {
+                  id: generateMessageId(),
+                  role: "user",
+                  content: thinkingPrompt,
+                  timestamp: new Date()
+                },
+              ]);
+              
+              thinkingProcess = await geminiApi.generateContent(thinkingMessages);
+            }
             
-            assistantResponse = await geminiApi.generateContent(geminiMessages);
-            assistantResponse += "\n\n*Note: I tried to generate an image but encountered an error. I've provided a text response instead.*";
-          }
-        } else {
-          // Regular text response with optional reasoning and thinking
-          const messageHistory = messages.slice(-100); // Get last 100 messages for context
-          
-          // Inject role information if available
-          const systemMessage: Message | null = rolePrompt ? {
-            id: generateMessageId(),
-            role: "user",
-            content: rolePrompt,
-            timestamp: new Date()
-          } : null;
-          
-          // If thinking mode is enabled, get thinking process first
-          if (options.useThinking) {
-            const thinkingPrompt = `I need to answer the following question or request: "${userMessage}". 
-            Let me think carefully about how to approach this problem step by step. I'll explore different aspects, consider relevant knowledge, and organize my thoughts.
-            I should show my detailed thought process so that someone can follow my reasoning.`;
-            
-            const thinkingMessages = prepareMessagesForGemini([
-              ...(systemMessage ? [systemMessage] : []),
-              {
-                id: generateMessageId(),
-                role: "user",
-                content: thinkingPrompt,
-                timestamp: new Date()
-              },
-            ]);
-            
-            thinkingProcess = await geminiApi.generateContent(thinkingMessages);
-          }
-          
-          // If reasoning mode is enabled, get reasoning process
-          if (options.useReasoning) {
-            const reasoningPrompt = `I need to answer the following question or request: "${userMessage}". 
-            Let me think step by step to reach a well-reasoned conclusion. 
-            I should consider relevant facts, potential approaches, and logical reasoning.`;
-            
-            const reasoningMessages = prepareMessagesForGemini([
-              ...(systemMessage ? [systemMessage] : []),
-              {
-                id: generateMessageId(),
-                role: "user",
-                content: reasoningPrompt,
-                timestamp: new Date()
-              },
-            ]);
-            
-            reasoningProcess = await geminiApi.generateContent(reasoningMessages);
-            
-            // Then get the final answer using the reasoning
-            const finalPrompt = `Based on my reasoning: ${reasoningProcess}
-            
-            Here is my concise, helpful response to the original question: "${userMessage}"`;
-            
-            const finalMessages = prepareMessagesForGemini([
-              ...(systemMessage ? [systemMessage] : []),
-              ...messageHistory,
-              {
-                id: generateMessageId(),
-                role: "user", 
-                content: finalPrompt,
-                timestamp: new Date()
-              }
-            ]);
-            
-            assistantResponse = await geminiApi.generateContent(finalMessages);
-          } else if (options.useThinking) {
-            // If only thinking mode is enabled, use that to generate the final response
-            const finalPrompt = `Based on my thinking process: ${thinkingProcess}
-            
-            Now I'll provide a clear, concise, and helpful response to the original question: "${userMessage}"`;
-            
-            const finalMessages = prepareMessagesForGemini([
-              ...(systemMessage ? [systemMessage] : []),
-              ...messageHistory,
-              {
-                id: generateMessageId(),
-                role: "user", 
-                content: finalPrompt,
-                timestamp: new Date()
-              }
-            ]);
-            
-            assistantResponse = await geminiApi.generateContent(finalMessages);
-          } else {
-            // Standard response without reasoning or thinking
-            const geminiMessages = prepareMessagesForGemini([
-              ...(systemMessage ? [systemMessage] : []),
-              ...messageHistory,
-              userMessageObj,
-            ]);
-            
-            assistantResponse = await geminiApi.generateContent(geminiMessages);
+            // If reasoning mode is enabled, get reasoning process
+            if (options.useReasoning) {
+              const reasoningPrompt = `I need to answer the following question or request: "${userMessage}". 
+              Let me think step by step to reach a well-reasoned conclusion. 
+              I should consider relevant facts, potential approaches, and logical reasoning.`;
+              
+              const reasoningMessages = prepareMessagesForGemini([
+                ...(systemMessage ? [systemMessage] : []),
+                {
+                  id: generateMessageId(),
+                  role: "user",
+                  content: reasoningPrompt,
+                  timestamp: new Date()
+                },
+              ]);
+              
+              reasoningProcess = await geminiApi.generateContent(reasoningMessages);
+              
+              // Then get the final answer using the reasoning
+              const finalPrompt = `Based on my reasoning: ${reasoningProcess}
+              
+              Here is my concise, helpful response to the original question: "${userMessage}"`;
+              
+              const finalMessages = prepareMessagesForGemini([
+                ...(systemMessage ? [systemMessage] : []),
+                ...messageHistory,
+                {
+                  id: generateMessageId(),
+                  role: "user", 
+                  content: finalPrompt,
+                  timestamp: new Date()
+                }
+              ]);
+              
+              assistantResponse = await geminiApi.generateContent(finalMessages);
+            } else if (options.useThinking) {
+              // If only thinking mode is enabled, use that to generate the final response
+              const finalPrompt = `Based on my thinking process: ${thinkingProcess}
+              
+              Now I'll provide a clear, concise, and helpful response to the original question: "${userMessage}"`;
+              
+              const finalMessages = prepareMessagesForGemini([
+                ...(systemMessage ? [systemMessage] : []),
+                ...messageHistory,
+                {
+                  id: generateMessageId(),
+                  role: "user", 
+                  content: finalPrompt,
+                  timestamp: new Date()
+                }
+              ]);
+              
+              assistantResponse = await geminiApi.generateContent(finalMessages);
+            } else {
+              // Standard response without reasoning or thinking
+              const geminiMessages = prepareMessagesForGemini([
+                ...(systemMessage ? [systemMessage] : []),
+                ...messageHistory,
+                userMessageObj,
+              ]);
+              
+              assistantResponse = await geminiApi.generateContent(geminiMessages);
+            }
           }
         }
       }
@@ -276,7 +313,8 @@ const Index = () => {
                 images: generatedImageUrl ? [generatedImageUrl] : undefined,
                 reasoning: options.useReasoning ? reasoningProcess : undefined,
                 thinking: options.useThinking ? thinkingProcess : undefined,
-                webSearch: webSearchResults
+                webSearch: webSearchResults,
+                toolsUsed: toolsInfo ? toolsInfo : undefined
               }
             : msg
         )
@@ -303,7 +341,7 @@ const Index = () => {
       // Update the assistant message with an error
       setMessages((prev) =>
         prev.map((msg) =>
-          msg.id === assistantMessageId
+          msg.role === "assistant" && msg.isLoading
             ? {
                 ...msg,
                 content: "I'm sorry, I encountered an error processing your request. Please try again.",
@@ -317,7 +355,54 @@ const Index = () => {
     } finally {
       setIsProcessing(false);
     }
-  }, [geminiApi, messages, activeConversation, conversations, showWelcome, activeRole]);
+  }, [geminiApi, messages, activeConversation, conversations, showWelcome, activeRole, toolsUsed]);
+
+  const checkForToolRequest = async (message: string): Promise<{needsTool: boolean, toolType: string}> => {
+    // Default response when no tool is needed
+    const defaultResponse = {needsTool: false, toolType: ""};
+    
+    if (!geminiApi) return defaultResponse;
+    
+    try {
+      // Analyze the user message to determine if a specialized tool is needed
+      const analysisPrompt = `
+      Analyze this user request and determine if it requires a specialized tool:
+      "${message}"
+      
+      Respond in JSON format ONLY:
+      {
+        "needsTool": boolean, 
+        "toolType": "string (e.g., calculator, data-analysis, code-executor, translator, etc.)",
+        "reason": "brief explanation"
+      }
+      
+      Only return true for needsTool if specialized processing beyond text generation is required.
+      `;
+      
+      const analysis = await geminiApi.generateContent([{
+        role: "user",
+        parts: [{text: analysisPrompt}]
+      }]);
+      
+      try {
+        // Extract the JSON from the response
+        const jsonMatch = analysis.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const result = JSON.parse(jsonMatch[0]);
+          return {
+            needsTool: result.needsTool,
+            toolType: result.toolType
+          };
+        }
+      } catch (parseError) {
+        console.error("Error parsing tool analysis:", parseError);
+      }
+    } catch (error) {
+      console.error("Error determining tool requirement:", error);
+    }
+    
+    return defaultResponse;
+  };
 
   const handleNewChat = () => {
     const newConversationId = generateMessageId();
@@ -389,8 +474,8 @@ const Index = () => {
                       Reasoning
                     </button>
                     <button className="control-button">
-                      <Mic className="h-4 w-4" />
-                      Voice
+                      <BrainCircuit className="h-4 w-4" />
+                      Thinking
                     </button>
                   </div>
                 </div>

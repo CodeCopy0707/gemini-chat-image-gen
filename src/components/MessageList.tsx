@@ -1,6 +1,6 @@
 
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Image as ImageIcon, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Copy } from "lucide-react";
+import { Image as ImageIcon, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Copy, Wand2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,6 +25,14 @@ export interface Message {
       title: string;
       description: string;
     }[];
+  };
+  toolsUsed?: {
+    toolType: string;
+    toolCreated: boolean;
+    toolResults: {
+      result: string;
+      explanation?: string;
+    };
   };
 }
 
@@ -156,12 +164,15 @@ const MessageList = ({ messages }: MessageListProps) => {
       <ScrollArea className="h-full">
         {messages.map((message) => {
           const isExpanded = expandedMessages[message.id] !== false; // Default to expanded
+          const hasExpandableContent = message.reasoning || message.thinking || 
+                                      (message.webSearch && message.webSearch.results.length > 0) ||
+                                      message.toolsUsed;
           
           return (
             <div
               key={message.id}
               className={cn(
-                "py-6 px-4 md:px-6",
+                "py-5 px-4 md:px-6",
                 message.role === "assistant" ? "bg-gray-50" : "bg-white"
               )}
             >
@@ -183,7 +194,7 @@ const MessageList = ({ messages }: MessageListProps) => {
                       {message.role === "user" ? "You" : "Gemini"}
                     </div>
                     
-                    {(message.reasoning || message.thinking || (message.webSearch && message.webSearch.results.length > 0)) && (
+                    {hasExpandableContent && (
                       <Button
                         variant="ghost"
                         size="sm"
@@ -238,6 +249,29 @@ const MessageList = ({ messages }: MessageListProps) => {
                           <p>{message.content}</p>
                         )}
                       </div>
+                      
+                      {/* Tools Used section */}
+                      {message.toolsUsed && isExpanded && (
+                        <div className="mt-2">
+                          <AccordionItem value="tools" className="border rounded-md overflow-hidden bg-indigo-50 border-indigo-200">
+                            <AccordionTrigger className="px-3 py-1 text-xs text-indigo-800 hover:no-underline">
+                              <div className="flex items-center">
+                                <Wand2 className="h-3 w-3 mr-1" />
+                                <span>Tool: {message.toolsUsed.toolType}</span>
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="bg-indigo-50 px-3 pb-3">
+                              <div className="prose prose-xs text-indigo-900 max-w-none">
+                                {message.toolsUsed.explanation && (
+                                  <div className="mb-2 text-indigo-700 italic text-xs">
+                                    {message.toolsUsed.explanation}
+                                  </div>
+                                )}
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        </div>
+                      )}
                       
                       {/* Thinking and Reasoning section */}
                       {(message.thinking || message.reasoning) && isExpanded && (

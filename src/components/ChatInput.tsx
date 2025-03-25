@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Send, Image as ImageIcon, Mic, Search, Lightbulb, BrainCircuit } from "lucide-react";
+import { PlusCircle, Send, Image as ImageIcon, Mic, Search, Lightbulb, BrainCircuit, Wand2 } from "lucide-react";
 import { useRef, useState, KeyboardEvent, ChangeEvent } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -38,7 +38,7 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
       setImages([]);
       
       if (textareaRef.current) {
-        textareaRef.current.style.height = "24px";
+        textareaRef.current.style.height = "30px";
       }
     }
   };
@@ -95,7 +95,7 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
     setMessage(e.target.value);
     
     if (textareaRef.current) {
-      textareaRef.current.style.height = "24px";
+      textareaRef.current.style.height = "30px";
       textareaRef.current.style.height = `${Math.min(
         textareaRef.current.scrollHeight,
         120
@@ -134,7 +134,7 @@ const ChatInput = ({ onSendMessage, disabled }: ChatInputProps) => {
           onChange={handleTextareaChange}
           onKeyDown={handleKeyDown}
           placeholder="Ask anything..."
-          className="h-30 max-h-[120px] resize-none py-3 px-4 border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-xl shadow-none"
+          className="h-[30px] max-h-[120px] resize-none py-3 px-4 border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-xl shadow-none"
           disabled={disabled}
         />
         
