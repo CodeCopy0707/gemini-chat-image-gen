@@ -1,3 +1,4 @@
+
 import { generateMessageId, GeminiApi } from "@/lib/gemini-api";
 
 interface ToolResponse {
@@ -26,66 +27,8 @@ export async function executeToolRequest(
       return await executeDataAnalysis(userMessage);
     case "summarizer":
       return await executeSummarizer(userMessage);
-    case "time-service":
-      return await executeTimeService(userMessage);
     default:
       return buildCustomTool(userMessage, toolType);
-  }
-}
-
-/**
- * Executes a time service tool
- */
-async function executeTimeService(userMessage: string): Promise<ToolResponse> {
-  console.log("Executing time service for:", userMessage);
-  
-  try {
-    // Get current time in different formats and timezones
-    const now = new Date();
-    const localTime = now.toLocaleString();
-    const utcTime = now.toUTCString();
-    
-    // Create a list of times in different major timezones
-    const timeZones = [
-      { name: "UTC", time: now.toISOString() },
-      { name: "Local", time: localTime },
-      { name: "New York (EST/EDT)", time: now.toLocaleString('en-US', { timeZone: 'America/New_York' }) },
-      { name: "Los Angeles (PST/PDT)", time: now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }) },
-      { name: "London (GMT/BST)", time: now.toLocaleString('en-US', { timeZone: 'Europe/London' }) },
-      { name: "Tokyo (JST)", time: now.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }) },
-      { name: "Sydney (AEST/AEDT)", time: now.toLocaleString('en-US', { timeZone: 'Australia/Sydney' }) },
-      { name: "Mumbai (IST)", time: now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }) }
-    ];
-    
-    // Format the time data in a readable way
-    const timeInfo = timeZones.map(tz => `**${tz.name}**: ${tz.time}`).join('\n');
-    
-    // Add date information
-    const dateInfo = `
-**Date Components**:
-- Day: ${now.getDate()}
-- Month: ${now.getMonth() + 1}
-- Year: ${now.getFullYear()}
-- Day of Week: ${now.toLocaleString('en-US', { weekday: 'long' })}
-- Day of Year: ${Math.floor((now - new Date(now.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24))}
-- Week of Year: ${Math.ceil((((now - new Date(now.getFullYear(), 0, 0)) / 86400000) + new Date(now.getFullYear(), 0, 0).getDay() + 1) / 7)}
-    `;
-    
-    // Generate the final result
-    const result = `# Time Information\n\n## Current Times Around the World\n${timeInfo}\n\n${dateInfo}`;
-    
-    return {
-      result,
-      explanation: "I used a specialized time service tool to provide accurate time information across different timezones.",
-      needsAdditionalProcessing: false
-    };
-    
-  } catch (error) {
-    console.error("Error executing time service:", error);
-    return {
-      result: "I tried to use a time service tool to provide time information, but encountered an error.",
-      needsAdditionalProcessing: true
-    };
   }
 }
 

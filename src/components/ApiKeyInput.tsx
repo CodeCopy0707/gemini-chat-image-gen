@@ -9,7 +9,7 @@ interface ApiKeyInputProps {
 }
 
 const ApiKeyInput = ({ onSubmit }: ApiKeyInputProps) => {
-  const [apiKey, setApiKey] = useState("AIzaSyDc7u7wTVdDG3zP18xnELKs0HX7-hImkmc");
+  const [apiKey, setApiKey] = useState("");
   const [showForm, setShowForm] = useState(true);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -34,13 +34,6 @@ const ApiKeyInput = ({ onSubmit }: ApiKeyInputProps) => {
     if (storedApiKey) {
       setApiKey(storedApiKey);
       onSubmit(storedApiKey);
-      setShowForm(false);
-    } else {
-      // If no stored key, use the default one
-      const defaultKey = "AIzaSyDc7u7wTVdDG3zP18xnELKs0HX7-hImkmc";
-      localStorage.setItem("geminiApiKey", defaultKey);
-      setApiKey(defaultKey);
-      onSubmit(defaultKey);
       setShowForm(false);
     }
   }, [onSubmit]);
